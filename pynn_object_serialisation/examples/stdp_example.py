@@ -168,7 +168,7 @@ pre_pop.record(['v', 'spikes'])
 post_pop.record(['v', 'spikes'])
 
 # Run simulation
-intercept_simulator(sim)
+intercept_simulator(sim, "sim_stdp_example")
 sim.run(simtime)
 
 print("Weights:{}".format(plastic_projection.get('weight', 'list')))
