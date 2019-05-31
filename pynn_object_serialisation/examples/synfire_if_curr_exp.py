@@ -6,7 +6,6 @@ from pyNN.utility.plotting import Figure, Panel
 import matplotlib.pyplot as plt
 from pynn_object_serialisation.functions import intercept_simulator
 
-
 runtime = 5000
 p.setup(timestep=1.0, min_delay=1.0, max_delay=144.0)
 nNeurons = 200  # number of neurons in each population
@@ -37,9 +36,9 @@ for i in range(0, nNeurons):
 injectionConnection = [(0, 0)]
 spikeArray = {'spike_times': [[0]]}
 populations.append(
-    p.Population(nNeurons, p.IF_curr_exp(**cell_params_lif), label='pop_1'))
+    p.Population(nNeurons, p.IF_curr_exp, cellparams=cell_params_lif, label='pop_1'))
 populations.append(
-    p.Population(1, p.SpikeSourceArray(**spikeArray), label='inputSpikes_1'))
+    p.Population(1, p.SpikeSourceArray, cellparams=spikeArray, label='inputSpikes_1'))
 
 projections.append(p.Projection(
     populations[0], populations[0], p.FromListConnector(loopConnections),
@@ -50,7 +49,7 @@ projections.append(p.Projection(
 
 populations[0].record(['v', 'gsyn_exc', 'gsyn_inh', 'spikes'])
 
-intercept_simulator(p)
+intercept_simulator(p, "sim_synfire_if_curr_exp")
 p.run(runtime)
 
 # get data (could be done as one, but can be done bit by bit as well)
