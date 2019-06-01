@@ -4,7 +4,7 @@ Synfirechain-like example
 import spynnaker8 as p
 from pyNN.utility.plotting import Figure, Panel
 import matplotlib.pyplot as plt
-from pynn_object_serialisation.functions import intercept_simulator
+from pynn_object_serialisation.functions import intercept_simulator, restore_simulator_from_file
 
 runtime = 5000
 p.setup(timestep=1.0, min_delay=1.0, max_delay=144.0)
@@ -50,7 +50,11 @@ projections.append(p.Projection(
 populations[0].record(['v', 'gsyn_exc', 'gsyn_inh', 'spikes'])
 
 intercept_simulator(p, "sim_synfire_if_curr_exp")
-import sys;sys.exit()
+import sys
+from importlib import reload
+p=reload(p)
+populations, projections = restore_simulator_from_file(p, "sim_synfire_if_curr_exp")
+intercept_simulator(p, "comparison_sim_synfire_if_curr_exp")
 p.run(runtime)
 
 # get data (could be done as one, but can be done bit by bit as well)
