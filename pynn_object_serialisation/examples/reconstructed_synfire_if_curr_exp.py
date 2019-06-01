@@ -5,11 +5,13 @@ Synfirechain-like example
 import spynnaker8 as p
 from pyNN.utility.plotting import Figure, Panel
 import matplotlib.pyplot as plt
-from pynn_object_serialisation.functions import restore_simulator_from_file
+from pynn_object_serialisation.functions import \
+    restore_simulator_from_file, intercept_simulator
 
 runtime = 5000
 
 populations, projections = restore_simulator_from_file(p, "sim_synfire_if_curr_exp")
+intercept_simulator(p, "comparison_sim_synfire_if_curr_exp")
 p.run(runtime)
 
 # get data (could be done as one, but can be done bit by bit as well)

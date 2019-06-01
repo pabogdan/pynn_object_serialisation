@@ -50,6 +50,7 @@ projections.append(p.Projection(
 populations[0].record(['v', 'gsyn_exc', 'gsyn_inh', 'spikes'])
 
 intercept_simulator(p, "sim_synfire_if_curr_exp")
+import sys;sys.exit()
 p.run(runtime)
 
 # get data (could be done as one, but can be done bit by bit as well)

@@ -3,22 +3,24 @@ from spinn_front_end_common.utilities import globals_variables
 import json  # used for saving and loading json description of PyNN network
 import pydoc  # used to retrieve Class from string
 import numpy as np
+from spynnaker8.models.synapse_dynamics import SynapseDynamicsStatic
 
+DEFAULT_RECEPTOR_TYPES=["excitatory", "inhibitory"]
 
 def _type_string_manipulation(class_string):
     return class_string.split("'")[1]
+
+def _trundle_through_synapse_information(syn_info, dict_to_augment):
+    dict_to_augment['weight'] = syn_info.weight
+    dict_to_augment['delay'] = syn_info.delay
+    # TODO continue for other types of synapse dynamics
 
 
 def intercept_simulator(sim, output_filename=None, cellparams=None):
     # intercept object and pickle
     current_simulator = globals_variables.get_simulator()
-    # Todo retrieve spike sources as well
     projections = current_simulator.projections
     populations = current_simulator.populations
-    # TODO retrieve textual description of:
-    # populations_types =
-    # TODO save textual description
-    x = projections[0]
 
     network_dict = {}
     network_dict['populations'] = {}
@@ -69,6 +71,10 @@ def intercept_simulator(sim, output_filename=None, cellparams=None):
         # TODO additional info req for STDP / Structural Plasticity
         network_dict['projections'][count]['synapse_dynamics'] = \
             _type_string_manipulation(str(type(proj._synapse_information.synapse_dynamics)))
+        network_dict['projections'][count]['synapse_dynamics_constructs'] = {}
+        _trundle_through_synapse_information(
+            proj._synapse_information.synapse_dynamics,
+            network_dict['projections'][count]['synapse_dynamics_constructs'])
         network_dict['projections'][count]['connector_id'] = id(proj._synapse_information.connector)
         network_dict['projections'][count]['connector_type'] = \
             _type_string_manipulation(str(type(proj._synapse_information.connector)))
@@ -139,14 +145,39 @@ def restore_simulator_from_file(sim, filename):
 
     # set up projections
     for proj_no in range(no_proj):
+        # temporary utility variable
         proj_info = json_data['projections'][str(proj_no)]
+        # id of projection used to retrieve from list connectivity
         _conn = connectivity_data[str(proj_info['id'])]
+        # build synapse dynamics
+        synapse_dynamics = _build_synapse_info(sim, proj_info)
+        # create the projection
         projections.append(
             sim.Projection(
                 populations[proj_info['pre_number']],  # pre population
                 populations[proj_info['post_number']],  # post population
                 pydoc.locate(proj_info['connector_type'])(_conn),  # connector
+                synapse_type=synapse_dynamics,
+                source=proj_info['source'],
+                receptor_type=DEFAULT_RECEPTOR_TYPES[proj_info['receptor_type']],
+                space=proj_info['space']
             )
         )
+
     connectivity_data.close()
     return populations, projections
+
+
+def _build_synapse_info(sim, construct):
+    dyn_type = construct['synapse_dynamics']
+    syn_info_class = pydoc.locate(dyn_type)
+    constructor_info = construct['synapse_dynamics_constructs']
+    if syn_info_class is SynapseDynamicsStatic:
+        syn_info = syn_info_class(weight=constructor_info['weight'],
+                                  delay=constructor_info['delay'])
+
+    else:
+        raise NotImplementedError(
+            "Synapse dynamics of type {} are not supported yet".format(
+                syn_info_class))
+    return syn_info
