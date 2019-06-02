@@ -16,7 +16,8 @@ def _trundle_through_synapse_information(syn_info, dict_to_augment):
     # TODO continue for other types of synapse dynamics
 
 
-def intercept_simulator(sim, output_filename=None, cellparams=None):
+def intercept_simulator(sim, output_filename=None, cellparams=None,
+                        post_abort=False):
     # intercept object and pickle
     current_simulator = globals_variables.get_simulator()
     projections = current_simulator.projections
@@ -80,8 +81,15 @@ def intercept_simulator(sim, output_filename=None, cellparams=None):
             _type_string_manipulation(str(type(proj._synapse_information.connector)))
         network_dict['projections'][count]['pre_id'] = id(proj.pre)
         network_dict['projections'][count]['pre_number'] = _id_to_count[id(proj.pre)]
+        # Help readability
+        network_dict['projections'][count]['pre_label'] = \
+            network_dict['populations'][_id_to_count[id(proj.pre)]]['label']
         network_dict['projections'][count]['post_id'] = id(proj.post)
         network_dict['projections'][count]['post_number'] = _id_to_count[id(proj.post)]
+        # Help readability
+        network_dict['projections'][count]['post_label'] = \
+            network_dict['populations'][_id_to_count[id(proj.post)]]['label']
+
         # Implement later
         network_dict['projections'][count]['space'] = None
         network_dict['projections'][count]['source'] = None
@@ -95,6 +103,7 @@ def intercept_simulator(sim, output_filename=None, cellparams=None):
     if output_filename:
         if output_filename[-5:] == ".json":
             output_filename = output_filename[:-5]
+        network_dict['connectivity_file'] = output_filename + ".npz"
         with open(output_filename + ".json", 'w') as json_file:
             json.dump(network_dict, json_file)
             json_data = json.dumps(network_dict)
@@ -103,7 +112,8 @@ def intercept_simulator(sim, output_filename=None, cellparams=None):
                             json_data=json_data,
                             **_projection_id_to_connectivity)
 
-        # import sys; sys.exit()
+    if post_abort:
+        import sys; sys.exit()
 
 
 def restore_simulator_from_file(sim, filename):
