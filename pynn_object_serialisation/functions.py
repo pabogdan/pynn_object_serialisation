@@ -3,17 +3,10 @@ from spinn_front_end_common.utilities import globals_variables
 import json  # used for saving and loading json description of PyNN network
 import pydoc  # used to retrieve Class from string
 import numpy as np
-from spynnaker8.models.synapse_dynamics import SynapseDynamicsStatic
+import serialisation_utils as utils
 
 DEFAULT_RECEPTOR_TYPES=["excitatory", "inhibitory"]
 
-def _type_string_manipulation(class_string):
-    return class_string.split("'")[1]
-
-def _trundle_through_synapse_information(syn_info, dict_to_augment):
-    dict_to_augment['weight'] = syn_info.weight
-    dict_to_augment['delay'] = syn_info.delay
-    # TODO continue for other types of synapse dynamics
 
 
 def intercept_simulator(sim, output_filename=None, cellparams=None,
@@ -48,10 +41,15 @@ def intercept_simulator(sim, output_filename=None, cellparams=None,
         network_dict['populations'][count]['label'] = pop.label
         network_dict['populations'][count]['n_neurons'] = pop.size
         network_dict['populations'][count]['cellclass'] = \
-            _type_string_manipulation(str(type(pop.celltype)))
+            utils._type_string_manipulation(str(type(pop.celltype)))
         _id_to_count[id(pop)] = count
         # TODO extra info for PSS
-        network_dict['populations'][count]['cellparams'] = pop._cellparams
+        try:
+            if pop._cellparams is None:
+                raise Exception
+            network_dict['populations'][count]['cellparams'] = pop._cellparams
+        except:
+            utils._trundle_through_neuron_information(pop, network_dict['populations'][count])
         # Implement later
         network_dict['populations'][count]['structure'] = None
         # network_dict['populations'][count]['constraints'] = pop.constraints
@@ -71,14 +69,14 @@ def intercept_simulator(sim, output_filename=None, cellparams=None,
             proj._synapse_information.synapse_type
         # TODO additional info req for STDP / Structural Plasticity
         network_dict['projections'][count]['synapse_dynamics'] = \
-            _type_string_manipulation(str(type(proj._synapse_information.synapse_dynamics)))
+            utils._type_string_manipulation(str(type(proj._synapse_information.synapse_dynamics)))
         network_dict['projections'][count]['synapse_dynamics_constructs'] = {}
-        _trundle_through_synapse_information(
+        utils._trundle_through_synapse_information(
             proj._synapse_information.synapse_dynamics,
             network_dict['projections'][count]['synapse_dynamics_constructs'])
         network_dict['projections'][count]['connector_id'] = id(proj._synapse_information.connector)
         network_dict['projections'][count]['connector_type'] = \
-            _type_string_manipulation(str(type(proj._synapse_information.connector)))
+            utils._type_string_manipulation(str(type(proj._synapse_information.connector)))
         network_dict['projections'][count]['pre_id'] = id(proj.pre)
         network_dict['projections'][count]['pre_number'] = _id_to_count[id(proj.pre)]
         # Help readability
@@ -160,7 +158,7 @@ def restore_simulator_from_file(sim, filename):
         # id of projection used to retrieve from list connectivity
         _conn = connectivity_data[str(proj_info['id'])]
         # build synapse dynamics
-        synapse_dynamics = _build_synapse_info(sim, proj_info)
+        synapse_dynamics = utils._build_synapse_info(sim, proj_info)
         # create the projection
         projections.append(
             sim.Projection(
@@ -177,17 +175,3 @@ def restore_simulator_from_file(sim, filename):
     connectivity_data.close()
     return populations, projections
 
-
-def _build_synapse_info(sim, construct):
-    dyn_type = construct['synapse_dynamics']
-    syn_info_class = pydoc.locate(dyn_type)
-    constructor_info = construct['synapse_dynamics_constructs']
-    if syn_info_class is SynapseDynamicsStatic:
-        syn_info = syn_info_class(weight=constructor_info['weight'],
-                                  delay=constructor_info['delay'])
-
-    else:
-        raise NotImplementedError(
-            "Synapse dynamics of type {} are not supported yet".format(
-                syn_info_class))
-    return syn_info

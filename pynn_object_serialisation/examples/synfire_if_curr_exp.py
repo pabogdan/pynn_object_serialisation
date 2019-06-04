@@ -36,7 +36,7 @@ for i in range(0, nNeurons):
 injectionConnection = [(0, 0)]
 spikeArray = {'spike_times': [[0]]}
 populations.append(
-    p.Population(nNeurons, p.IF_curr_exp, cellparams=cell_params_lif, label='pop_1'))
+    p.Population(nNeurons, p.IF_curr_exp(**cell_params_lif), label='pop_1'))
 populations.append(
     p.Population(1, p.SpikeSourceArray, cellparams=spikeArray, label='inputSpikes_1'))
 
@@ -50,9 +50,10 @@ projections.append(p.Projection(
 populations[0].record(['v', 'gsyn_exc', 'gsyn_inh', 'spikes'])
 
 intercept_simulator(p, "sim_synfire_if_curr_exp")
-import sys
+
 from importlib import reload
-p=reload(p)
+
+p = reload(p)
 populations, projections = restore_simulator_from_file(p, "sim_synfire_if_curr_exp")
 intercept_simulator(p, "comparison_sim_synfire_if_curr_exp")
 p.run(runtime)
