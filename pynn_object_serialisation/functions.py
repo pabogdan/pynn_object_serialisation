@@ -3,7 +3,7 @@ from spinn_front_end_common.utilities import globals_variables
 import json  # used for saving and loading json description of PyNN network
 import pydoc  # used to retrieve Class from string
 import numpy as np
-import serialisation_utils as utils
+import pynn_object_serialisation.serialisation_utils as utils
 
 DEFAULT_RECEPTOR_TYPES=["excitatory", "inhibitory"]
 
@@ -45,12 +45,10 @@ def intercept_simulator(sim, output_filename=None, cellparams=None,
         _id_to_count[id(pop)] = count
         # TODO extra info for PSS
         try:
-            if pop._cellparams is None:
-                raise Exception
-            network_dict['populations'][count]['cellparams'] = pop._cellparams
-        except:
             utils._trundle_through_neuron_information(pop, network_dict['populations'][count])
-        # Implement later
+        except:
+            network_dict['populations'][count]['cellparams'] = pop._cellparams
+            # Implement later
         network_dict['populations'][count]['structure'] = None
         # network_dict['populations'][count]['constraints'] = pop.constraints
         # Recording
