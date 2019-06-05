@@ -1,6 +1,6 @@
 import pydoc
 from spynnaker8.models.synapse_dynamics import SynapseDynamicsStatic
-from spynnaker8 import SpikeSourceArray
+from spynnaker8 import SpikeSourceArray, SpikeSourcePoisson
 
 def _type_string_manipulation(class_string):
     return class_string.split("'")[1]
@@ -41,7 +41,8 @@ def _get_init_params_and_svars(cls):
 def _trundle_through_neuron_information(neuron_model, dict_to_augment):
     parameter_list = neuron_model._celltype.default_parameters.keys()
     retrieved_params = {}
-    if isinstance(neuron_model._celltype, SpikeSourceArray):
+    if (isinstance(neuron_model._celltype, SpikeSourceArray) or
+        isinstance(neuron_model._celltype, SpikeSourcePoisson)):
         model_components = [neuron_model._celltype]
     else:
         model_components = neuron_model._celltype._model._components
