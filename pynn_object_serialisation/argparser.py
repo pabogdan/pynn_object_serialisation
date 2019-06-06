@@ -28,7 +28,7 @@ parser.add_argument('--dir', type=str,
                          'store network architectures',
                     default=DEFAULT_JSON_DIR)
 
-parser.add_argument('--prune_level', type=int,
+parser.add_argument('--prune_level', type=float,
                     help='proportion of top weights to be kept -- '
                          'e.g. a value of 1 means 100% of connections are kept,'
                          ' while a value of .1 means that the top 10% '
