@@ -2,6 +2,7 @@ import pydoc
 from spynnaker8.models.synapse_dynamics import SynapseDynamicsStatic
 from spynnaker8 import SpikeSourceArray, SpikeSourcePoisson
 
+
 def _type_string_manipulation(class_string):
     return class_string.split("'")[1]
 
@@ -42,7 +43,7 @@ def _trundle_through_neuron_information(neuron_model, dict_to_augment):
     parameter_list = neuron_model._celltype.default_parameters.keys()
     retrieved_params = {}
     if (isinstance(neuron_model._celltype, SpikeSourceArray) or
-        isinstance(neuron_model._celltype, SpikeSourcePoisson)):
+            isinstance(neuron_model._celltype, SpikeSourcePoisson)):
         model_components = [neuron_model._celltype]
     else:
         model_components = neuron_model._celltype._model._components
@@ -54,3 +55,12 @@ def _trundle_through_neuron_information(neuron_model, dict_to_augment):
                 pass
     dict_to_augment['cellparams'] = retrieved_params
     # TODO continue for other types of synapse dynamics
+
+
+def _prune_connector(conn, prune_level=1):
+    if prune_level == 1:
+        return conn
+    descending_argsort = conn[:, 2].argsort()[::-1]
+    cutoff_number = conn.shape[0] * prune_level
+    conn = conn[descending_argsort[:cutoff_number]]
+    return conn

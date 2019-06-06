@@ -112,7 +112,7 @@ def intercept_simulator(sim, output_filename=None, cellparams=None,
         import sys; sys.exit()
 
 
-def restore_simulator_from_file(sim, filename):
+def restore_simulator_from_file(sim, filename, prune_level=1):
     # Objects and parameters
     projections = []
     populations = []
@@ -154,7 +154,9 @@ def restore_simulator_from_file(sim, filename):
         # temporary utility variable
         proj_info = json_data['projections'][str(proj_no)]
         # id of projection used to retrieve from list connectivity
-        _conn = connectivity_data[str(proj_info['id'])]
+        _conn = utils._prune_connector(connectivity_data[str(proj_info['id'])],
+                                       prune_level=prune_level)
+
         # build synapse dynamics
         synapse_dynamics = utils._build_synapse_info(sim, proj_info)
         # create the projection
