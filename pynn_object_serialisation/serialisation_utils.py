@@ -61,6 +61,6 @@ def _prune_connector(conn, prune_level=1):
     if prune_level == 1:
         return conn
     descending_argsort = conn[:, 2].argsort()[::-1]
-    cutoff_number = conn.shape[0] * prune_level
+    cutoff_number = int(conn.shape[0] * prune_level)
     conn = conn[descending_argsort[:cutoff_number]]
     return conn
