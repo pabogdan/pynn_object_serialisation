@@ -13,6 +13,7 @@ from pynn_object_serialisation.functions import \
 import os
 import numpy as np
 import traceback
+
 start_time = plt.datetime.datetime.now()
 runtime = args.sim_time
 e = None
@@ -21,9 +22,10 @@ populations, projections = restore_simulator_from_file(
     sim, model_file_path, prune_level=args.prune_level)
 try:
     sim.run(runtime)
+    sim.end()
 except Exception as e:
     traceback.print_exc()
-sim.end()
+
 end_time = plt.datetime.datetime.now()
 total_time = end_time - start_time
 print("Total time elapsed -- " + str(total_time))
