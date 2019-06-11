@@ -44,15 +44,19 @@ def _trundle_through_neuron_information(neuron_model, dict_to_augment):
     retrieved_params = {}
     if (isinstance(neuron_model._celltype, SpikeSourceArray) or
             isinstance(neuron_model._celltype, SpikeSourcePoisson)):
-        model_components = [neuron_model._celltype]
+        # model_components = [neuron_model._celltype]
+        merged_dict = {'spike_times': neuron_model._celltype._spike_times}
+
     else:
         model_components = neuron_model._celltype._model._components
-    for param in parameter_list:
+        # merge returned dicts
+        merged_dict = {}
         for comp in model_components:
-            try:
-                retrieved_params[param] = getattr(comp, '_' + param)
-            except:
-                pass
+            merged_dict.update(comp.get_all_parameters())
+
+    for param in parameter_list:
+        retrieved_params[param] = merged_dict[param]
+
     dict_to_augment['cellparams'] = retrieved_params
     # TODO continue for other types of synapse dynamics
 

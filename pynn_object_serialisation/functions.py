@@ -44,11 +44,8 @@ def intercept_simulator(sim, output_filename=None, cellparams=None,
             utils._type_string_manipulation(str(type(pop.celltype)))
         _id_to_count[id(pop)] = count
         # TODO extra info for PSS
-        try:
-            utils._trundle_through_neuron_information(pop, network_dict['populations'][count])
-        except:
-            network_dict['populations'][count]['cellparams'] = pop._cellparams
-            # Implement later
+        utils._trundle_through_neuron_information(pop, network_dict['populations'][count])
+        # Implement later
         network_dict['populations'][count]['structure'] = None
         # network_dict['populations'][count]['constraints'] = pop.constraints
         # Recording
@@ -89,11 +86,10 @@ def intercept_simulator(sim, output_filename=None, cellparams=None,
         # Implement later
         network_dict['projections'][count]['space'] = None
         network_dict['projections'][count]['source'] = None
-        try:
-            _projection_id_to_connectivity[str(id(proj))] = \
-                proj._synapse_information._connector.conn_list
-        except:
-            _projection_id_to_connectivity[str(id(proj))] = None
+
+        _projection_id_to_connectivity[str(id(proj))] = \
+            proj._synapse_information.connector.conn_list
+
 
 
     if output_filename:
