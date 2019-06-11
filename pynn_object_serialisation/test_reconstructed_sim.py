@@ -16,7 +16,7 @@ import traceback
 
 start_time = plt.datetime.datetime.now()
 runtime = args.sim_time
-e = None
+current_error = "NO ERROR"
 model_file_path = os.path.join(args.dir, args.model)
 populations, projections = restore_simulator_from_file(
     sim, model_file_path, prune_level=args.prune_level)
@@ -24,6 +24,7 @@ try:
     sim.run(runtime)
     sim.end()
 except Exception as e:
+    current_error = e
     traceback.print_exc()
 
 end_time = plt.datetime.datetime.now()
@@ -36,6 +37,6 @@ np.savez_compressed(filename,
                     total_time=total_time,
                     model_file_path=model_file_path,
                     prune_level=args.prune_level,
-                    exception=str(e))
+                    exception=str(current_error))
 if __name__ == "__main__":
     pass
