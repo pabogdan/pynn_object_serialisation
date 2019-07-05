@@ -1,10 +1,10 @@
-import pyNN
 from spinn_front_end_common.utilities import globals_variables
 import json  # used for saving and loading json description of PyNN network
 import pydoc  # used to retrieve Class from string
 import numpy as np
 import pynn_object_serialisation.serialisation_utils as utils
 from spynnaker8.extra_models import SpikeSourcePoissonVariable
+from spynnaker8 import SpikeSourceArray
 
 DEFAULT_RECEPTOR_TYPES=["excitatory", "inhibitory"]
 
@@ -120,7 +120,14 @@ def intercept_simulator(sim, output_filename=None, cellparams=None,
 
 
 def restore_simulator_from_file(sim, filename, prune_level=1,
-                                is_input_vrpss=False):
+                                is_input_vrpss=False,
+                                vrpss_cellparams=None):
+
+    if not is_input_vrpss and vrpss_cellparams:
+        raise AttributeError("Undefined configuration. You are passing in "
+                             "parameters for a Variable Rate Poisson Spike "
+                             "Source, but you are not setting "
+                             "is_input_vrpss=True")
     # Objects and parameters
     projections = []
     populations = []
@@ -147,6 +154,9 @@ def restore_simulator_from_file(sim, filename, prune_level=1,
         pop_cellclass = pydoc.locate(pop_info['cellclass'])
         if pop_cellclass is SpikeSourcePoissonVariable:
             pop_cellparams = connectivity_data[pop_info['cellparams']].ravel()[0]
+        elif pop_cellclass is SpikeSourceArray:
+            pop_cellclass = SpikeSourcePoissonVariable
+            pop_cellparams = vrpss_cellparams
         else:
             pop_cellparams = pop_info['cellparams']
         populations.append(
