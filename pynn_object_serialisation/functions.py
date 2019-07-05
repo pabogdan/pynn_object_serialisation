@@ -4,6 +4,7 @@ import json  # used for saving and loading json description of PyNN network
 import pydoc  # used to retrieve Class from string
 import numpy as np
 import pynn_object_serialisation.serialisation_utils as utils
+from spynnaker8.extra_models import SpikeSourcePoissonVariable
 
 DEFAULT_RECEPTOR_TYPES=["excitatory", "inhibitory"]
 
@@ -13,6 +14,7 @@ def intercept_simulator(sim, output_filename=None, cellparams=None,
                         post_abort=False):
     # intercept object and pickle
     current_simulator = globals_variables.get_simulator()
+    sim = current_simulator
     projections = current_simulator.projections
     populations = current_simulator.populations
 
@@ -32,6 +34,7 @@ def intercept_simulator(sim, output_filename=None, cellparams=None,
     # Linking dicts
     _id_to_count = {}
     _projection_id_to_connectivity = {}
+    _population_id_to_parameters = {}
     _spike_source_to_activity = {}
 
     # save population info
@@ -42,9 +45,16 @@ def intercept_simulator(sim, output_filename=None, cellparams=None,
         network_dict['populations'][count]['n_neurons'] = pop.size
         network_dict['populations'][count]['cellclass'] = \
             utils._type_string_manipulation(str(type(pop.celltype)))
+        if isinstance(pop.celltype, SpikeSourcePoissonVariable):
+            network_dict['populations'][count]['cellparams'] = str(id(pop))
+            _population_id_to_parameters[str(id(pop))] = \
+                utils._trundle_through_neuron_information(pop)
+        else:
+            utils._trundle_through_neuron_information(
+                pop, network_dict['populations'][count])
         _id_to_count[id(pop)] = count
         # TODO extra info for PSS
-        utils._trundle_through_neuron_information(pop, network_dict['populations'][count])
+
         # Implement later
         network_dict['populations'][count]['structure'] = None
         # network_dict['populations'][count]['constraints'] = pop.constraints
@@ -102,13 +112,15 @@ def intercept_simulator(sim, output_filename=None, cellparams=None,
         # save connectivity information
         np.savez_compressed(output_filename,
                             json_data=json_data,
-                            **_projection_id_to_connectivity)
+                            **_projection_id_to_connectivity,
+                            **_population_id_to_parameters)
 
     if post_abort:
         import sys; sys.exit()
 
 
-def restore_simulator_from_file(sim, filename, prune_level=1):
+def restore_simulator_from_file(sim, filename, prune_level=1,
+                                is_input_vrpss=False):
     # Objects and parameters
     projections = []
     populations = []
@@ -117,7 +129,7 @@ def restore_simulator_from_file(sim, filename, prune_level=1):
     with open(filename + ".json", "r") as read_file:
         json_data = json.load(read_file)
     # Load connectivity data from disk
-    connectivity_data = np.load(filename + ".npz")
+    connectivity_data = np.load(filename + ".npz", allow_pickle=True)
 
     no_pops = len(json_data['populations'].keys())
     no_proj = len(json_data['projections'].keys())
@@ -132,11 +144,16 @@ def restore_simulator_from_file(sim, filename, prune_level=1):
     # set up populations
     for pop_no in range(no_pops):
         pop_info = json_data['populations'][str(pop_no)]
+        pop_cellclass = pydoc.locate(pop_info['cellclass'])
+        if pop_cellclass is SpikeSourcePoissonVariable:
+            pop_cellparams = connectivity_data[pop_info['cellparams']].ravel()[0]
+        else:
+            pop_cellparams = pop_info['cellparams']
         populations.append(
             sim.Population(
                 pop_info['n_neurons'],
-                pydoc.locate(pop_info['cellclass']),
-                pop_info['cellparams'],
+                pop_cellclass,
+                pop_cellparams,
                 label=pop_info['label']
             )
         )

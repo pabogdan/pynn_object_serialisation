@@ -1,6 +1,7 @@
 import pydoc
 from spynnaker8.models.synapse_dynamics import SynapseDynamicsStatic
 from spynnaker8 import SpikeSourceArray, SpikeSourcePoisson
+from spynnaker8.extra_models import SpikeSourcePoissonVariable
 
 
 def _type_string_manipulation(class_string):
@@ -39,14 +40,19 @@ def _get_init_params_and_svars(cls):
     return init, params, svars
 
 
-def _trundle_through_neuron_information(neuron_model, dict_to_augment):
+def _trundle_through_neuron_information(neuron_model, dict_to_augment=None):
     parameter_list = neuron_model._celltype.default_parameters.keys()
     retrieved_params = {}
     if (isinstance(neuron_model._celltype, SpikeSourceArray) or
             isinstance(neuron_model._celltype, SpikeSourcePoisson)):
         # model_components = [neuron_model._celltype]
         merged_dict = {'spike_times': neuron_model._celltype._spike_times}
-
+    elif isinstance(neuron_model._celltype, SpikeSourcePoissonVariable):
+        __cell_ref = neuron_model._celltype
+        merged_dict = {
+            'rates':__cell_ref._rates,
+            'starts':__cell_ref._starts,
+            'durations':__cell_ref._durations}
     else:
         model_components = neuron_model._celltype._model._components
         # merge returned dicts
@@ -57,8 +63,10 @@ def _trundle_through_neuron_information(neuron_model, dict_to_augment):
     for param in parameter_list:
         retrieved_params[param] = merged_dict[param]
 
-    dict_to_augment['cellparams'] = retrieved_params
+    if dict_to_augment:
+        dict_to_augment['cellparams'] = retrieved_params
     # TODO continue for other types of synapse dynamics
+    return retrieved_params
 
 
 def _prune_connector(conn, prune_level=1):
