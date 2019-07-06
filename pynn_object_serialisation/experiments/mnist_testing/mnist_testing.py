@@ -33,13 +33,17 @@ input_params = {
     "durations": durations,
     "starts": starts
 }
+# scaling rates
+# TODO parameterise this
+rates = rates / 10
 
 populations, projections = restore_simulator_from_file(
     sim, args.model,
     is_input_vrpss=True,
     vrpss_cellparams=input_params)
-sim.set_number_of_neurons_per_core(SpikeSourcePoissonVariable, 256 // 16)
-sim.set_number_of_neurons_per_core(sim.IF_curr_exp, 128)
+sim.set_number_of_neurons_per_core(SpikeSourcePoissonVariable, 16)
+sim.set_number_of_neurons_per_core(sim.SpikeSourcePoisson, 16)
+sim.set_number_of_neurons_per_core(sim.IF_curr_exp, 64)
 # set up recordings for other layers if necessary
 populations[1].record("spikes")
 populations[2].record("spikes")
@@ -50,7 +54,19 @@ for pop in populations[1:]:
     spikes_dict[pop.label] = pop.spinnaker_get_data('spikes')
 
 # save results
-np.savez_compressed("mnist_results",
+
+if args.result_filename:
+    results_filename = args.result_filename
+else:
+    results_filename = "mnist_results"
+    if args.suffix:
+        results_filename += args.suffix
+    else:
+        import pylab
+        now = pylab.datetime.datetime.now()
+        results_filename += "_"+now.strftime("_%H%M%S_%d%m%Y")
+
+np.savez_compressed(results_filename,
                     spikes_dict=spikes_dict,
                     y_test=y_test)
 sim.end()
