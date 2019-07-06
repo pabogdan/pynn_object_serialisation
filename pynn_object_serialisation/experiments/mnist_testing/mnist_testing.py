@@ -3,6 +3,7 @@ from keras.datasets import mnist, cifar10, cifar100
 import keras
 # usual sPyNNaker imports
 from mnist_argparser import args
+
 try:
     import spynnaker8 as sim
 except:
@@ -13,26 +14,43 @@ from pynn_object_serialisation.functions import \
 from spynnaker8.extra_models import SpikeSourcePoissonVariable
 import numpy as np
 
-N_layer = 28**2  # number of neurons in each population
+N_layer = 28 ** 2  # number of neurons in each population
 t_stim = 200
 (x_train, y_train), (x_test, y_test) = mnist.load_data()
+# reshape input to flatten data
+x_train = x_train.reshape(x_train.shape[0], np.prod(x_train.shape[1:]))
+x_test = x_test.reshape(x_test.shape[0], np.prod(x_test.shape[1:]))
+
 runtime = x_test.shape[0] * t_stim
 number_of_slots = int(runtime / t_stim)
 range_of_slots = np.arange(number_of_slots)
 starts = np.ones((N_layer, number_of_slots)) * (range_of_slots * t_stim)
 durations = np.ones((N_layer, number_of_slots)) * t_stim
-rates = np.random.randint(1, 5, size=(N_layer, number_of_slots))
+# rates = np.random.randint(1, 5, size=(N_layer, number_of_slots))
+rates = x_test.T
 input_params = {
-    "rates":rates,
-    "durations":durations,
-    "starts":starts
+    "rates": rates,
+    "durations": durations,
+    "starts": starts
 }
 
-populations, projections = restore_simulator_from_file(sim, args.model,
-                                                       is_input_vrpss=True,
-                                                       vrpss_cellparams=input_params)
+populations, projections = restore_simulator_from_file(
+    sim, args.model,
+    is_input_vrpss=True,
+    vrpss_cellparams=input_params)
 sim.set_number_of_neurons_per_core(SpikeSourcePoissonVariable, 256 // 16)
 sim.set_number_of_neurons_per_core(sim.IF_curr_exp, 128)
+# set up recordings for other layers if necessary
+populations[1].record("spikes")
+populations[2].record("spikes")
+populations[3].record("spikes")
+spikes_dict = {}
 sim.run(runtime)
-sim.end()
+for pop in populations[1:]:
+    spikes_dict[pop.label] = pop.spinnaker_get_data('spikes')
 
+# save results
+np.savez_compressed("mnist_results",
+                    spikes_dict=spikes_dict,
+                    y_test=y_test)
+sim.end()
