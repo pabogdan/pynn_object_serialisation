@@ -13,6 +13,11 @@ from pynn_object_serialisation.functions import \
     restore_simulator_from_file
 from spynnaker8.extra_models import SpikeSourcePoissonVariable
 import numpy as np
+import os
+
+# Checking directory structure exists
+if not os.path.isdir(args.result_dir) and not os.path.exists(args.result_dir):
+    os.mkdir(args.result_dir)
 
 N_layer = 28 ** 2  # number of neurons in each population
 t_stim = 200
@@ -35,7 +40,7 @@ input_params = {
 }
 # scaling rates
 # TODO parameterise this
-rates = rates / 10
+rates = rates / 2
 
 populations, projections = restore_simulator_from_file(
     sim, args.model,
@@ -49,9 +54,12 @@ populations[1].record("spikes")
 populations[2].record("spikes")
 populations[3].record("spikes")
 spikes_dict = {}
+neo_spikes_dict = {}
 sim.run(runtime)
 for pop in populations[1:]:
     spikes_dict[pop.label] = pop.spinnaker_get_data('spikes')
+for pop in populations[1:]:
+    neo_spikes_dict[pop.label] = pop.get_data('spikes')
 
 # save results
 
@@ -66,7 +74,10 @@ else:
         now = pylab.datetime.datetime.now()
         results_filename += "_"+now.strftime("_%H%M%S_%d%m%Y")
 
-np.savez_compressed(results_filename,
+np.savez_compressed(os.path.join(args.result_dir, results_filename),
                     spikes_dict=spikes_dict,
-                    y_test=y_test)
+                    neo_spikes_dict=neo_spikes_dict,
+                    y_test=y_test,
+                    N_layer=N_layer,
+                    t_stim=t_stim)
 sim.end()
