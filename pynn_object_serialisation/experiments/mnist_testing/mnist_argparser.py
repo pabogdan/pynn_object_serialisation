@@ -6,6 +6,8 @@ epochs = 20
 DEFAULT_MODEL_DIR = 'models/'
 DEFAULT_RESULT_DIR = 'results/'
 
+DEFAULT_RATE_SCALING = 4.
+
 parser = argparse.ArgumentParser(
     description='converted-MNIST argparser',
     formatter_class=argparse.RawTextHelpFormatter)
@@ -50,6 +52,10 @@ parser.add_argument('--result_dir', type=str,
                     help='directory inp which to load and '
                          'store network architectures',
                     default=DEFAULT_RESULT_DIR)
+
+parser.add_argument('--rate_scaling', type=float,
+                    help='input value scaling so as to properly be interpreted'
+                         'as a rate', default=DEFAULT_RATE_SCALING)
 
 args = parser.parse_args()
 

@@ -39,8 +39,7 @@ input_params = {
     "starts": starts
 }
 # scaling rates
-# TODO parameterise this
-rates = rates / 2
+rates = rates * args.rate_scaling
 
 populations, projections = restore_simulator_from_file(
     sim, args.model,
