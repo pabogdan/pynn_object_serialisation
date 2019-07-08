@@ -58,10 +58,13 @@ parser.add_argument('--rate_scaling', type=float,
                     help='input value scaling so as to properly be interpreted'
                          'as a rate', default=DEFAULT_RATE_SCALING)
 
-
 parser.add_argument('--t_stim', type=int,
                     help='how long to present single patterns',
                     default=DEFAULT_T_STIM)
 
-args = parser.parse_args()
 
+parser.add_argument('--testing_examples', type=int,
+                    help='number of testing examples to show',
+                    default=None)
+
+args = parser.parse_args()

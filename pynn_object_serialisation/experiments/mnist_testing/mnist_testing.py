@@ -26,13 +26,18 @@ t_stim = args.t_stim
 x_train = x_train.reshape(x_train.shape[0], np.prod(x_train.shape[1:]))
 x_test = x_test.reshape(x_test.shape[0], np.prod(x_test.shape[1:]))
 
-runtime = x_test.shape[0] * t_stim
+if args.testing_examples:
+    testing_examples = args.testing_examples
+else:
+    testing_examples = x_test.shape[0]
+
+runtime = testing_examples * t_stim
 number_of_slots = int(runtime / t_stim)
 range_of_slots = np.arange(number_of_slots)
 starts = np.ones((N_layer, number_of_slots)) * (range_of_slots * t_stim)
 durations = np.ones((N_layer, number_of_slots)) * t_stim
 # rates = np.random.randint(1, 5, size=(N_layer, number_of_slots))
-rates = x_test.T
+rates = x_test[:testing_examples, :].T
 input_params = {
     "rates": rates,
     "durations": durations,
@@ -70,8 +75,9 @@ else:
         results_filename += args.suffix
     else:
         import pylab
+
         now = pylab.datetime.datetime.now()
-        results_filename += "_"+now.strftime("_%H%M%S_%d%m%Y")
+        results_filename += "_" + now.strftime("_%H%M%S_%d%m%Y")
 
 np.savez_compressed(os.path.join(args.result_dir, results_filename),
                     spikes_dict=spikes_dict,
