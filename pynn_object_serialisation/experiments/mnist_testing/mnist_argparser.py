@@ -7,6 +7,7 @@ DEFAULT_MODEL_DIR = 'models/'
 DEFAULT_RESULT_DIR = 'results/'
 
 DEFAULT_RATE_SCALING = 4.
+DEFAULT_T_STIM = 200  # ms
 
 parser = argparse.ArgumentParser(
     description='converted-MNIST argparser',
@@ -56,6 +57,11 @@ parser.add_argument('--result_dir', type=str,
 parser.add_argument('--rate_scaling', type=float,
                     help='input value scaling so as to properly be interpreted'
                          'as a rate', default=DEFAULT_RATE_SCALING)
+
+
+parser.add_argument('--t_stim', type=int,
+                    help='how long to present single patterns',
+                    default=DEFAULT_T_STIM)
 
 args = parser.parse_args()
 

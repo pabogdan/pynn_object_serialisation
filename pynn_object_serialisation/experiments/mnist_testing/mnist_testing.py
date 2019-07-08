@@ -20,7 +20,7 @@ if not os.path.isdir(args.result_dir) and not os.path.exists(args.result_dir):
     os.mkdir(args.result_dir)
 
 N_layer = 28 ** 2  # number of neurons in each population
-t_stim = 200
+t_stim = args.t_stim
 (x_train, y_train), (x_test, y_test) = mnist.load_data()
 # reshape input to flatten data
 x_train = x_train.reshape(x_train.shape[0], np.prod(x_train.shape[1:]))
