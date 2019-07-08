@@ -78,5 +78,7 @@ np.savez_compressed(os.path.join(args.result_dir, results_filename),
                     neo_spikes_dict=neo_spikes_dict,
                     y_test=y_test,
                     N_layer=N_layer,
-                    t_stim=t_stim)
+                    t_stim=t_stim,
+                    runtime=runtime,
+                    sim_time=runtime)
 sim.end()
