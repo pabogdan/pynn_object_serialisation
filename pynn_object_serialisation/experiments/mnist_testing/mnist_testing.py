@@ -54,17 +54,17 @@ sim.set_number_of_neurons_per_core(SpikeSourcePoissonVariable, 16)
 sim.set_number_of_neurons_per_core(sim.SpikeSourcePoisson, 16)
 sim.set_number_of_neurons_per_core(sim.IF_curr_exp, 64)
 # set up recordings for other layers if necessary
-populations[1].record("spikes")
-populations[2].record("spikes")
-populations[3].record("spikes")
+for pop in populations[:]:
+    pop.record("spikes")
+populations[3].record("v")
 spikes_dict = {}
 neo_spikes_dict = {}
 sim.run(runtime)
-for pop in populations[1:]:
+for pop in populations[:]:
     spikes_dict[pop.label] = pop.spinnaker_get_data('spikes')
-for pop in populations[1:]:
+for pop in populations[:]:
     neo_spikes_dict[pop.label] = pop.get_data('spikes')
-
+output_v = populations[3].spinnaker_get_data('v')
 # save results
 
 if args.result_filename:
@@ -81,6 +81,7 @@ else:
 
 np.savez_compressed(os.path.join(args.result_dir, results_filename),
                     spikes_dict=spikes_dict,
+                    output_v=output_v,
                     neo_spikes_dict=neo_spikes_dict,
                     y_test=y_test,
                     N_layer=N_layer,
