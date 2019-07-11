@@ -23,6 +23,10 @@ parser.add_argument('--non_categorical', dest="non_categorical",
                     help='filename for results',
                     action="store_false")
 
+parser.add_argument('--record_v',
+                    help='record voltage for output neurons',
+                    action="store_true")
+
 parser.add_argument('--epochs', type=int,
                     help='number of epochs', default=epochs)
 

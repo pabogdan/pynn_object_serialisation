@@ -51,7 +51,7 @@ replace = {
     "tau_syn_E": 1,
     "tau_syn_I": 1,
 }
-
+output_v = []
 populations, projections = restore_simulator_from_file(
     sim, args.model,
     is_input_vrpss=True,
@@ -63,15 +63,18 @@ sim.set_number_of_neurons_per_core(sim.IF_curr_exp, 64)
 # set up recordings for other layers if necessary
 for pop in populations[:]:
     pop.record("spikes")
-populations[3].record("v")
+if args.record_v:
+    populations[-1].record("v")
 spikes_dict = {}
 neo_spikes_dict = {}
 sim.run(runtime)
 for pop in populations[:]:
     spikes_dict[pop.label] = pop.spinnaker_get_data('spikes')
-for pop in populations[:]:
-    neo_spikes_dict[pop.label] = pop.get_data('spikes')
-output_v = populations[3].spinnaker_get_data('v')
+# the following takes more time than spinnaker_get_data
+# for pop in populations[:]:
+#     neo_spikes_dict[pop.label] = pop.get_data('spikes')
+if args.record_v:
+    output_v = populations[-1].spinnaker_get_data('v')
 # save results
 
 if args.result_filename:
