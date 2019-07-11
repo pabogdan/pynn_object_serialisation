@@ -48,8 +48,8 @@ rates = rates * args.rate_scaling
 
 # produce parameter replacement dict
 replace = {
-    "tau_syn_E": 1,
-    "tau_syn_I": 1,
+    "tau_syn_E": 0.1,
+    "tau_syn_I": 0.1,
 }
 output_v = []
 populations, projections = restore_simulator_from_file(
