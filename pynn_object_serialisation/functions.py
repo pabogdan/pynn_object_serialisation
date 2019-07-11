@@ -121,7 +121,9 @@ def intercept_simulator(sim, output_filename=None, cellparams=None,
 
 def restore_simulator_from_file(sim, filename, prune_level=1,
                                 is_input_vrpss=False,
-                                vrpss_cellparams=None):
+                                vrpss_cellparams=None,
+                                replace_params=None):
+    replace_params = replace_params or {}
 
     if not is_input_vrpss and vrpss_cellparams:
         raise AttributeError("Undefined configuration. You are passing in "
@@ -159,6 +161,11 @@ def restore_simulator_from_file(sim, filename, prune_level=1,
             pop_cellparams = vrpss_cellparams
         else:
             pop_cellparams = pop_info['cellparams']
+
+        for k in replace_params.keys():
+            if k in pop_cellparams.keys():
+                pop_cellparams[k] = replace_params[k]
+
         populations.append(
             sim.Population(
                 pop_info['n_neurons'],

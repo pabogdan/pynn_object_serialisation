@@ -46,10 +46,17 @@ input_params = {
 # scaling rates
 rates = rates * args.rate_scaling
 
+# produce parameter replacement dict
+replace = {
+    "tau_syn_E": 1,
+    "tau_syn_I": 1,
+}
+
 populations, projections = restore_simulator_from_file(
     sim, args.model,
     is_input_vrpss=True,
-    vrpss_cellparams=input_params)
+    vrpss_cellparams=input_params,
+    replace_params=replace)
 sim.set_number_of_neurons_per_core(SpikeSourcePoissonVariable, 16)
 sim.set_number_of_neurons_per_core(sim.SpikeSourcePoisson, 16)
 sim.set_number_of_neurons_per_core(sim.IF_curr_exp, 64)
