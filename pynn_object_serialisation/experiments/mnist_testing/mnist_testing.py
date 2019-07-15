@@ -44,7 +44,8 @@ input_params = {
     "starts": starts
 }
 # scaling rates
-rates = rates * args.rate_scaling
+_0_to_1_rates = rates / float(np.max(rates))
+rates = _0_to_1_rates * args.rate_scaling
 
 # produce parameter replacement dict
 replace = {

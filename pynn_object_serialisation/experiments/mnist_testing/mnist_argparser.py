@@ -6,7 +6,7 @@ epochs = 20
 DEFAULT_MODEL_DIR = 'models/'
 DEFAULT_RESULT_DIR = 'results/'
 
-DEFAULT_RATE_SCALING = 4.
+DEFAULT_RATE_SCALING = 1000  # Hz
 DEFAULT_T_STIM = 200  # ms
 
 parser = argparse.ArgumentParser(
