@@ -38,19 +38,21 @@ starts = np.ones((N_layer, number_of_slots)) * (range_of_slots * t_stim)
 durations = np.ones((N_layer, number_of_slots)) * t_stim
 # rates = np.random.randint(1, 5, size=(N_layer, number_of_slots))
 rates = x_test[:testing_examples, :].T
+
+# scaling rates
+_0_to_1_rates = rates / float(np.max(rates))
+rates = _0_to_1_rates * args.rate_scaling
+
 input_params = {
     "rates": rates,
     "durations": durations,
     "starts": starts
 }
-# scaling rates
-_0_to_1_rates = rates / float(np.max(rates))
-rates = _0_to_1_rates * args.rate_scaling
-
 # produce parameter replacement dict
 replace = {
     "tau_syn_E": 0.1,
     "tau_syn_I": 0.1,
+    "v_thresh": 1.,
 }
 output_v = []
 populations, projections = restore_simulator_from_file(
@@ -61,6 +63,11 @@ populations, projections = restore_simulator_from_file(
 sim.set_number_of_neurons_per_core(SpikeSourcePoissonVariable, 16)
 sim.set_number_of_neurons_per_core(sim.SpikeSourcePoisson, 16)
 sim.set_number_of_neurons_per_core(sim.IF_curr_exp, 64)
+# if args.test_with_pss:
+#     pss_params = {
+#         'rate'
+#     }
+#     populations.append(sim.Population(sim.SpikeSourcePoisson, ))
 # set up recordings for other layers if necessary
 for pop in populations[:]:
     pop.record("spikes")

@@ -27,6 +27,12 @@ parser.add_argument('--record_v',
                     help='record voltage for output neurons',
                     action="store_true")
 
+
+parser.add_argument('--test_with_pss',
+                    help='Test using only the Poisson Spike Source '
+                         '(not variable)',
+                    action="store_true")
+
 parser.add_argument('--epochs', type=int,
                     help='number of epochs', default=epochs)
 
