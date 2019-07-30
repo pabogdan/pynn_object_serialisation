@@ -156,7 +156,7 @@ def restore_simulator_from_file(sim, filename, prune_level=1,
         pop_cellclass = pydoc.locate(pop_info['cellclass'])
         if pop_cellclass is SpikeSourcePoissonVariable:
             pop_cellparams = connectivity_data[pop_info['cellparams']].ravel()[0]
-        elif pop_cellclass is SpikeSourceArray:
+        elif pop_cellclass is SpikeSourceArray and is_input_vrpss:
             pop_cellclass = SpikeSourcePoissonVariable
             pop_cellparams = vrpss_cellparams
         else:

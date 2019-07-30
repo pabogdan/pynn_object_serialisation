@@ -2,6 +2,7 @@ import pydoc
 from spynnaker8.models.synapse_dynamics import SynapseDynamicsStatic
 from spynnaker8 import SpikeSourceArray, SpikeSourcePoisson
 from spynnaker8.extra_models import SpikeSourcePoissonVariable
+import numpy as np
 
 
 def _type_string_manipulation(class_string):
@@ -59,6 +60,10 @@ def _trundle_through_neuron_information(neuron_model, dict_to_augment=None):
         merged_dict = {}
         for comp in model_components:
             merged_dict.update(comp.get_all_parameters())
+    # check that parameters are not numpy arrays
+    for p in merged_dict.keys():
+        if isinstance(merged_dict[p], np.ndarray):
+            merged_dict[p] = merged_dict[p].tolist()
 
     for param in parameter_list:
         retrieved_params[param] = merged_dict[param]

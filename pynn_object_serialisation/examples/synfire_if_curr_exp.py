@@ -4,6 +4,7 @@ Synfirechain-like example
 import spynnaker8 as p
 from pyNN.utility.plotting import Figure, Panel
 import matplotlib.pyplot as plt
+import numpy as np
 from pynn_object_serialisation.functions import intercept_simulator, restore_simulator_from_file
 
 runtime = 5000
@@ -12,7 +13,7 @@ nNeurons = 200  # number of neurons in each population
 p.set_number_of_neurons_per_core(p.IF_curr_exp, nNeurons / 2)
 
 cell_params_lif = {'cm': 0.25,
-                   'i_offset': 0.0,
+                   'i_offset': np.random.rand(nNeurons)*0.01,
                    'tau_m': 20.0,
                    'tau_refrac': 2.0,
                    'tau_syn_E': 5.0,
