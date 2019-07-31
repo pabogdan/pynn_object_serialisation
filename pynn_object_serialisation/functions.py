@@ -40,18 +40,20 @@ def intercept_simulator(sim, output_filename=None, cellparams=None,
     # save population info
     for count, pop in enumerate(populations):
         network_dict['populations'][count] = {}
-        network_dict['populations'][count]['id'] = id(pop)
+        p_id = id(pop)
+        network_dict['populations'][count]['id'] = p_id
         network_dict['populations'][count]['label'] = pop.label
         network_dict['populations'][count]['n_neurons'] = pop.size
         network_dict['populations'][count]['cellclass'] = \
             utils._type_string_manipulation(str(type(pop.celltype)))
         if isinstance(pop.celltype, SpikeSourcePoissonVariable):
             network_dict['populations'][count]['cellparams'] = str(id(pop))
-            _population_id_to_parameters[str(id(pop))] = \
+            _population_id_to_parameters[str(p_id)] = \
                 utils._trundle_through_neuron_information(pop)
         else:
-            utils._trundle_through_neuron_information(
-                pop, network_dict['populations'][count])
+            _population_id_to_parameters[str(p_id)] = \
+                utils._trundle_through_neuron_information(
+                pop)
         _id_to_count[id(pop)] = count
         # TODO extra info for PSS
 
@@ -142,7 +144,6 @@ def restore_simulator_from_file(sim, filename, prune_level=1,
 
     no_pops = len(json_data['populations'].keys())
     no_proj = len(json_data['projections'].keys())
-
     # setup
     setup_params = json_data['setup']
     sim.setup(setup_params['machine_time_step']/1000.,
@@ -153,6 +154,7 @@ def restore_simulator_from_file(sim, filename, prune_level=1,
     # set up populations
     for pop_no in range(no_pops):
         pop_info = json_data['populations'][str(pop_no)]
+        p_id = pop_info['id']
         pop_cellclass = pydoc.locate(pop_info['cellclass'])
         if pop_cellclass is SpikeSourcePoissonVariable:
             pop_cellparams = connectivity_data[pop_info['cellparams']].ravel()[0]
@@ -160,7 +162,8 @@ def restore_simulator_from_file(sim, filename, prune_level=1,
             pop_cellclass = SpikeSourcePoissonVariable
             pop_cellparams = vrpss_cellparams
         else:
-            pop_cellparams = pop_info['cellparams']
+            pop_cellparams = \
+                connectivity_data[str(p_id)].ravel()[0]
 
         for k in replace_params.keys():
             if k in pop_cellparams.keys():
