@@ -44,16 +44,21 @@ def _get_init_params_and_svars(cls):
 def _trundle_through_neuron_information(neuron_model, dict_to_augment=None):
     parameter_list = neuron_model._celltype.default_parameters.keys()
     retrieved_params = {}
-    if (isinstance(neuron_model._celltype, SpikeSourceArray) or
-            isinstance(neuron_model._celltype, SpikeSourcePoisson)):
+    if isinstance(neuron_model._celltype, SpikeSourceArray):
         # model_components = [neuron_model._celltype]
         merged_dict = {'spike_times': neuron_model._vertex._spike_times}
+    elif isinstance(neuron_model._celltype, SpikeSourcePoisson):
+        __cell_ref = neuron_model._vertex
+        merged_dict = {
+            'rate': __cell_ref.rate,
+            'start': __cell_ref.start,
+            'duration': __cell_ref.duration}
     elif isinstance(neuron_model._celltype, SpikeSourcePoissonVariable):
         __cell_ref = neuron_model._vertex
         merged_dict = {
-            'rates':__cell_ref._rates,
-            'starts':__cell_ref._starts,
-            'durations':__cell_ref._durations}
+            'rates':__cell_ref.rates,
+            'starts':__cell_ref.starts,
+            'durations':__cell_ref.durations}
     else:
         # model_components = neuron_model._celltype._model._components
         # model_components = neuron_model._vertex._parameters
