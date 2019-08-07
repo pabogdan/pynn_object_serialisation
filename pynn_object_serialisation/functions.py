@@ -11,13 +11,13 @@ DEFAULT_RECEPTOR_TYPES=["excitatory", "inhibitory"]
 
 
 def intercept_simulator(sim, output_filename=None, cellparams=None,
-                        post_abort=False):
+                        post_abort=False, custom_params=None):
     # intercept object and pickle
     current_simulator = globals_variables.get_simulator()
     sim = current_simulator
     projections = current_simulator.projections
     populations = current_simulator.populations
-
+    custom_params = custom_params or {}
     network_dict = {}
     network_dict['populations'] = {}
     network_dict['projections'] = {}
@@ -25,7 +25,7 @@ def intercept_simulator(sim, output_filename=None, cellparams=None,
     network_dict['recordings'] = {}
     network_dict['connectivity_file'] = ''
     network_dict['front_end_versions'] = current_simulator._front_end_versions
-
+    network_dict['custom_params'] = custom_params
     # save setup info
     network_dict['setup']['machine_time_step'] = current_simulator.machine_time_step
     network_dict['setup']['min_delay'] = current_simulator.min_delay
@@ -150,7 +150,11 @@ def restore_simulator_from_file(sim, filename, prune_level=1,
               setup_params['min_delay'],
               setup_params['max_delay'])
     # could set global constraints TODO
-
+    
+    try:
+        custom_params = json_data['custom_params']
+    except KeyError:
+        custom_params = {}
     # set up populations
     for pop_no in range(no_pops):
         pop_info = json_data['populations'][str(pop_no)]
@@ -206,5 +210,5 @@ def restore_simulator_from_file(sim, filename, prune_level=1,
         )
 
     connectivity_data.close()
-    return populations, projections
+    return populations, projections, custom_params
 

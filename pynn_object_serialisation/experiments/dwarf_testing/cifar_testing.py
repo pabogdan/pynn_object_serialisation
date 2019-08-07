@@ -55,7 +55,7 @@ replace = {
     "v_thresh": 1.,
 }
 output_v = []
-populations, projections = restore_simulator_from_file(
+populations, projections, custom_params = restore_simulator_from_file(
     sim, args.model,
     is_input_vrpss=True,
     vrpss_cellparams=input_params,
@@ -98,12 +98,12 @@ else:
         results_filename += "_" + now.strftime("_%H%M%S_%d%m%Y")
 
 np.savez_compressed(os.path.join(args.result_dir, results_filename),
-                    spikes_dict=spikes_dict,
                     output_v=output_v,
                     neo_spikes_dict=neo_spikes_dict,
                     y_test=y_test,
                     N_layer=N_layer,
                     t_stim=t_stim,
                     runtime=runtime,
-                    sim_time=runtime)
+                    sim_time=runtime, 
+                    **spikes_dict)
 sim.end()
