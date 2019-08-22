@@ -6,8 +6,7 @@ import pynn_object_serialisation.serialisation_utils as utils
 from spynnaker8.extra_models import SpikeSourcePoissonVariable
 from spynnaker8 import SpikeSourceArray
 
-DEFAULT_RECEPTOR_TYPES=["excitatory", "inhibitory"]
-
+DEFAULT_RECEPTOR_TYPES = ["excitatory", "inhibitory"]
 
 
 def intercept_simulator(sim, output_filename=None, cellparams=None,
@@ -64,9 +63,8 @@ def intercept_simulator(sim, output_filename=None, cellparams=None,
         try:
             network_dict['populations'][count]['recording_variables'] = \
                 pop._vertex._neuron_recorder.recording_variables
-        except:
+        except Exception:
             network_dict['populations'][count]['recording_variables'] = None
-
 
     # save projection info
     for count, proj in enumerate(projections):
@@ -76,21 +74,26 @@ def intercept_simulator(sim, output_filename=None, cellparams=None,
             proj._synapse_information.synapse_type
         # TODO additional info req for STDP / Structural Plasticity
         network_dict['projections'][count]['synapse_dynamics'] = \
-            utils._type_string_manipulation(str(type(proj._synapse_information.synapse_dynamics)))
+            utils._type_string_manipulation(
+                str(type(proj._synapse_information.synapse_dynamics)))
         network_dict['projections'][count]['synapse_dynamics_constructs'] = {}
         utils._trundle_through_synapse_information(
             proj._synapse_information.synapse_dynamics,
             network_dict['projections'][count]['synapse_dynamics_constructs'])
-        network_dict['projections'][count]['connector_id'] = id(proj._synapse_information.connector)
+        network_dict['projections'][count]['connector_id'] = id(
+            proj._synapse_information.connector)
         network_dict['projections'][count]['connector_type'] = \
-            utils._type_string_manipulation(str(type(proj._synapse_information.connector)))
+            utils._type_string_manipulation(
+                str(type(proj._synapse_information.connector)))
         network_dict['projections'][count]['pre_id'] = id(proj.pre)
-        network_dict['projections'][count]['pre_number'] = _id_to_count[id(proj.pre)]
+        network_dict['projections'][count]['pre_number'] = _id_to_count[id(
+            proj.pre)]
         # Help readability
         network_dict['projections'][count]['pre_label'] = \
             network_dict['populations'][_id_to_count[id(proj.pre)]]['label']
         network_dict['projections'][count]['post_id'] = id(proj.post)
-        network_dict['projections'][count]['post_number'] = _id_to_count[id(proj.post)]
+        network_dict['projections'][count]['post_number'] = _id_to_count[id(
+            proj.post)]
         # Help readability
         network_dict['projections'][count]['post_label'] = \
             network_dict['populations'][_id_to_count[id(proj.post)]]['label']
@@ -101,8 +104,6 @@ def intercept_simulator(sim, output_filename=None, cellparams=None,
 
         _projection_id_to_connectivity[str(id(proj))] = \
             proj._synapse_information.connector.conn_list
-
-
 
     if output_filename:
         if output_filename[-5:] == ".json":
@@ -118,7 +119,8 @@ def intercept_simulator(sim, output_filename=None, cellparams=None,
                             **_population_id_to_parameters)
 
     if post_abort:
-        import sys; sys.exit()
+        import sys
+        sys.exit()
 
 
 def restore_simulator_from_file(sim, filename, prune_level=1,
@@ -146,11 +148,11 @@ def restore_simulator_from_file(sim, filename, prune_level=1,
     no_proj = len(json_data['projections'].keys())
     # setup
     setup_params = json_data['setup']
-    sim.setup(setup_params['machine_time_step']/1000.,
+    sim.setup(setup_params['machine_time_step'] / 1000.,
               setup_params['min_delay'],
               setup_params['max_delay'])
     # could set global constraints TODO
-    
+
     try:
         custom_params = json_data['custom_params']
     except KeyError:
@@ -161,7 +163,8 @@ def restore_simulator_from_file(sim, filename, prune_level=1,
         p_id = pop_info['id']
         pop_cellclass = pydoc.locate(pop_info['cellclass'])
         if pop_cellclass is SpikeSourcePoissonVariable:
-            pop_cellparams = connectivity_data[pop_info['cellparams']].ravel()[0]
+            pop_cellparams = connectivity_data[pop_info['cellparams']].ravel()[
+                0]
         elif pop_cellclass is SpikeSourceArray and is_input_vrpss:
             pop_cellclass = SpikeSourcePoissonVariable
             pop_cellparams = vrpss_cellparams
@@ -212,3 +215,49 @@ def restore_simulator_from_file(sim, filename, prune_level=1,
     connectivity_data.close()
     return populations, projections, custom_params
 
+
+def get_params_from_serialisation(sim, key):
+    """Gets a given parameter from an intercepted sim.
+    """
+
+    if isinstance(sim, str):
+        # Load the data from disk
+        with open(sim + ".json", "r") as read_file:
+            json_data = json.load(read_file)
+        # Load connectivity data from disk
+        connectivity_data = np.load(sim + ".npz", allow_pickle=True)
+        no_pops = len(json_data['populations'].keys())
+    else:
+        print("sim should be file")
+
+    for pop_no in range(no_pops):
+        pop_info = json_data['populations'][str(pop_no)]
+        p_id = pop_info['id']
+        pop_cellclass = pydoc.locate(pop_info['cellclass'])
+        if str(p_id) not in connectivity_data.files:
+            continue
+        else:
+            pop_cellparams = connectivity_data[str(p_id)].ravel()[0]
+        try:
+            print(pop_cellparams[key])
+        except Exception:
+            print("Param {} not found".format(key))
+    return params
+
+
+def get_rescaled_i_offset(i_offset, new_runtime, old_runtime=1000):
+    """Adjusts biases to the runtime of the simulation. This assumes no leak and no changes.
+    """
+
+    scaling_factor = old_runtime / new_runtime
+
+    return i_offset * scaling_factor
+
+
+def set_i_offsets(populations, new_runtime, old_runtime=1000):
+    for population in populations:
+        try:
+            i_offset = population.get('i_offset')
+            population.set(i_offset=get_rescaled_biases(i_offset, new_runtime))
+        except Exception:
+            pass

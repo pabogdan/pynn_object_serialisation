@@ -6,11 +6,11 @@ from cifar_argparser import args
 
 try:
     import spynnaker8 as sim
-except:
+except Exception:
     import pyNN.spiNNaker as sim
 import matplotlib.pyplot as plt
 from pynn_object_serialisation.functions import \
-    restore_simulator_from_file
+    restore_simulator_from_file, get_rescaled_i_offset, set_i_offsets
 from spynnaker8.extra_models import SpikeSourcePoissonVariable
 import numpy as np
 import os
@@ -63,6 +63,8 @@ populations, projections, custom_params = restore_simulator_from_file(
 sim.set_number_of_neurons_per_core(SpikeSourcePoissonVariable, 16)
 sim.set_number_of_neurons_per_core(sim.SpikeSourcePoisson, 16)
 sim.set_number_of_neurons_per_core(sim.IF_curr_exp, 64)
+set_i_offsets(populations, runtime)
+
 # if args.test_with_pss:
 #     pss_params = {
 #         'rate'
@@ -104,6 +106,6 @@ np.savez_compressed(os.path.join(args.result_dir, results_filename),
                     N_layer=N_layer,
                     t_stim=t_stim,
                     runtime=runtime,
-                    sim_time=runtime, 
+                    sim_time=runtime,
                     **spikes_dict)
 sim.end()
