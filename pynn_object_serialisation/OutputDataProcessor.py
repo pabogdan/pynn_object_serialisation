@@ -7,13 +7,14 @@ class OutputDataProcessor():
     def __init__(self, path):
         self.data = np.load(path)
         self.input_layer_name = 'InputLayer'
-        self.output_layer_name = get_ordered_layer_names_from_data(data)[-1]
-        self.y_test = data['y_test']
-        self.spikes_dict = data['spikes_dict'].ravel()[0]
+        self.output_layer_name = self.get_ordered_layer_names_from_data(
+            self.data)[-1]
+        self.y_test = self.data['y_test']
+        self.spikes_dict = self.reconstruct_spikes_dict()
         self.t_stim = data['t_stim']
-        self.runtime = int(data['runtime'])
-        self.N_layer = int(data['N_layer'])
-        self.neo_object = data['neo_spikes_dict']
+        self.runtime = int(self.data['runtime'])
+        self.N_layer = int(self.data['N_layer'])
+        self.neo_object = self.data['neo_spikes_dict']
         self.delay = self.get_delay()
         self.input_layer_name = self.get_ordered_layer_names(self.spikes_dict)[
             0]
@@ -35,6 +36,42 @@ class OutputDataProcessor():
             '/mnt/snntoolbox/snn_toolbox_private/examples/models/05-mobilenet_dwarf_v1/x_test.npz')
         self.x_test = x_test_file['arr_0']
         x_test_file.close()
+
+    def get_ordered_layer_names(dictionary):
+        self.layer_names = list(dictionary)
+        layer_names.sort()
+        layer_names[0] = layer_names.pop(-1)
+        return layer_names
+
+    def get_ordered_layer_names_from_data(self):
+        if self.spikes_dict is None:
+            spikes_dict = self.reconstruct_spikes_dict()
+        dictionary = spikes_dict.keys()
+        return self.get_ordered_layer_names(dictionary)
+
+    def get_shape_from_name(name):
+        shape_string = name.split('_')
+        if len(shape_string) < 2:
+            return
+        else:
+            shape_string = shape_string[1]
+        shape_list = shape_string.split('x')
+        return tuple([int(item) for item in shape_list])
+
+    def reconstruct_spikes_dict(self):
+        '''This is necessary due to serialisation problems is spikes_dict is packaged into an array.'''
+        expected_files = [
+            'N_layer',
+            'y_test',
+            'output_v',
+            'runtime',
+            't_stim',
+            'neo_spikes_dict',
+            'sim_time']
+        unexpected_files = [
+            file for file in self.data.files if file not in expected_files]
+        self.spike_dict = {
+            file_name: self.data[file_name] for file_name in unexpected_files}
 
     def get_delay(self):
         'Cannnot currently calculate model with delays other than 1 ms between layers'
