@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
 class OutputDataProcessor():
     ''' A class to represent the output of a serialised model and to
@@ -127,8 +128,8 @@ class OutputDataProcessor():
         if bin_number > self.number_of_examples: 
             raise Exception('bin_number greater than number_of_examples')
             bin_number = self.number_of_examples-1
-        output_spikes = self.get_counts(self.output_spikes, bin_number)
+        output_spikes = self.spikes_dict[self.output_layer_name]
         output_labels, output_counts = np.unique(output_spikes[:,0], return_counts=True)
-        label_names = [name.decode('utf-8') for name in label_names]
+        label_names = [name.decode('utf-8') for name in self.label_names]
         plt.bar(output_labels, output_counts)
         plt.xticks(output_labels, label_names, rotation=90)
