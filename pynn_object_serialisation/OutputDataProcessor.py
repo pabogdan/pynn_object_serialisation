@@ -82,54 +82,62 @@ class OutputDataProcessor():
             print('Final bin cutoff.')'''
         return lower_end_bin_time, higher_end_bin_time
 
-    def get_bin_spikes(self, spikes, bin_number):
+    def get_bin_spikes(self, bin_number, layer_name):
+        '''Returns the spike train data for a given layer and bin'''
         lower_end_bin_time, higher_end_bin_time = self.get_bounds(bin_number)
+        spikes = self.spikes_dict[layer_name]
         output = spikes[np.where((spikes[:, 1] >= lower_end_bin_time) & (
-            spikes[:, 1] < higher_end_bin_time)), :]
+            spikes[:, 1] < higher_end_bin_time))]
         output = np.asarray(output).astype(int)
         return output
 
-    def get_counts(self, spikes, bin_number):
-        min_length = 3 * 32**2
-        spikes = self.get_bin_spikes(spikes, bin_number)
+    def get_counts(self, bin_number, layer_name, minlength= 3*32**2):
+        '''Returns the counts per neuron per bin in a given layer'''
+        spikes = self.get_bin_spikes(bin_number, layer_name)
         just_spikes = spikes.reshape((-1, 2))[:, 0]
-        counts = np.bincount(just_spikes, minlength=min_length)
+        counts = np.bincount(just_spikes, minlength=minlength)
         return counts
 
-    def get_rates(self, spikes, bin_number):
-        return self.get_counts(spikes, bin_number) / self.t_stim
+    def get_rates(self, bin_number, layer_name, shape):
+        return self.get_counts(bin_number, layer_name, shape) / self.t_stim
 
-    def plot_rates(self, rates):
-        shape = shape = (32, 32, 3)
+    def plot_rates(self, rates, shape = (32, 32, 3)):
         rates /= rates.max()
         plt.imshow(rates.reshape(shape))
         plt.show()
 
-    def plot_bin(spikes, bin_number):
-        self.plot_rates(self.get_rates(spikes, bin_number))
+    def plot_bin(self, bin_number, layer_name, shape = (10,1)):
+        self.plot_rates(self.get_rates(bin_number, layer_name, np.product(shape)), shape)
 
-    def get_prediction(self, spikes, bin_number):
+    def get_prediction(self, spikes, bin_number, layer_name):
         output_size = 10
-        counts = self.get_counts(spikes, bin_number)
+        counts = self.get_counts(bin_number, layer_name, output_size)
         if counts.max() > 0:
             return int(np.argmax(counts))
         else:
             return -1
 
     def get_batch_predictions(self):
-        actual_test_labels = self.y_test[:self.number_of_examples].ravel()
         y_pred = np.ones(self.number_of_examples) * (-1)
         for bin_number in range(self.number_of_examples):
             y_pred[bin_number] = self.get_prediction(
-                self.output_spikes, bin_number)
+                self.output_spikes, bin_number, self.output_layer_name)
         return y_pred
 
     def plot_output(self, bin_number):
         if bin_number > self.number_of_examples: 
             raise Exception('bin_number greater than number_of_examples')
             bin_number = self.number_of_examples-1
-        output_spikes = self.spikes_dict[self.output_layer_name]
-        output_labels, output_counts = np.unique(output_spikes[:,0], return_counts=True)
+        output_spikes = self.get_counts(bin_number, self.output_layer_name, 10)
         label_names = [name.decode('utf-8') for name in self.label_names]
-        plt.bar(output_labels, output_counts)
-        plt.xticks(output_labels, label_names, rotation=90)
+        plt.bar(label_names, output_spikes)
+        plt.xticks(rotation=90)
+
+    def get_accuracy(self):
+        actual_test_labels = self.y_test[:self.number_of_examples].ravel()
+        y_pred = self.get_batch_predictions()
+        return np.count_nonzero(y_pred==actual_test_labels)/float(self.number_of_examples)
+
+    def bin_summary(self, bin_number):
+        self.plot_output(bin_number)
+        self.plot_bin(bin_number, self.output_layer_name)
