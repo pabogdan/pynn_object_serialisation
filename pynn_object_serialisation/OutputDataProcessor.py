@@ -67,19 +67,16 @@ class OutputDataProcessor():
         return {file_name: self.data[file_name] for file_name in unexpected_files}
 
     def get_delay(self):
-        'Cannnot currently calculate model with delays other than 1 ms between layers'
+        #Cannnot currently calculate model with delays other than 1 ms between layers
 
-        return (self.N_layer - 1) * self.dt
+        return (len(self.layer_names) - 1) * self.dt
 
     def get_bounds(self, bin_number):
-        #delay = get_propagation_delay(t_stim, N_layers)
-        delay = 0
-        lower_end_bin_time = bin_number * self.t_stim + delay
-        higher_end_bin_time = (bin_number + 1) * self.t_stim + delay
-        '''maximum_time = t_stim * maximum_bins
-        if higher_end_bin_time > maximum_time:
-            higher_end_bin_time = maximum_time
-            print('Final bin cutoff.')'''
+        lower_end_bin_time = bin_number * self.t_stim + self.delay
+        higher_end_bin_time = (bin_number + 1) * self.t_stim + self.delay
+        if higher_end_bin_time > self.runtime:
+            higher_end_bin_time = self.runtime
+            print('Final bin cut off.')
         return lower_end_bin_time, higher_end_bin_time
 
     def get_bin_spikes(self, bin_number, layer_name):
@@ -104,12 +101,13 @@ class OutputDataProcessor():
     def plot_rates(self, rates, shape = (32, 32, 3)):
         rates /= rates.max()
         plt.imshow(rates.reshape(shape))
+        plt.colorbar()
         plt.show()
 
     def plot_bin(self, bin_number, layer_name, shape = (10,1)):
         self.plot_rates(self.get_rates(bin_number, layer_name, np.product(shape)), shape)
 
-    def get_prediction(self, spikes, bin_number, layer_name):
+    def get_prediction(self, bin_number, layer_name):
         output_size = 10
         counts = self.get_counts(bin_number, layer_name, output_size)
         if counts.max() > 0:
@@ -121,7 +119,7 @@ class OutputDataProcessor():
         y_pred = np.ones(self.number_of_examples) * (-1)
         for bin_number in range(self.number_of_examples):
             y_pred[bin_number] = self.get_prediction(
-                self.output_spikes, bin_number, self.output_layer_name)
+                bin_number, self.output_layer_name)
         return y_pred
 
     def plot_output(self, bin_number):
