@@ -216,6 +216,25 @@ def restore_simulator_from_file(sim, filename, prune_level=1,
     return populations, projections, custom_params
 
 
+def get_input_size(sim):
+
+    if isinstance(sim, str):
+        # Load the data from disk
+        with open(sim + ".json", "r") as read_file:
+            json_data = json.load(read_file)
+        # Load connectivity data from disk
+        connectivity_data = np.load(sim + ".npz", allow_pickle=True)
+        no_pops = len(json_data['populations'].keys())
+    else:
+        print("sim should be file")
+
+    input_layer = json_data['populations']['0']
+
+    assert input_layer['label'] == 'InputLayer', "First layer is not input layer"
+
+    return input_layer['n_neurons']
+
+
 def get_params_from_serialisation(sim, key):
     """Gets a given parameter from an intercepted sim.
     """
