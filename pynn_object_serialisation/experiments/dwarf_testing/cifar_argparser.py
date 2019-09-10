@@ -8,6 +8,7 @@ DEFAULT_RESULT_DIR = 'results/'
 
 DEFAULT_RATE_SCALING = 1000  # Hz
 DEFAULT_T_STIM = 200  # ms
+DEFAULT_CHUNK_SIZE = 2 # bins
 
 parser = argparse.ArgumentParser(
     description='converted-cifar argparser',
@@ -72,6 +73,9 @@ parser.add_argument('--t_stim', type=int,
                     help='how long to present single patterns',
                     default=DEFAULT_T_STIM)
 
+parser.add_argument('--chunk_size', type=int,
+                    help='the number of bins per chunk',
+                    default=DEFAULT_CHUNK_SIZE)
 
 parser.add_argument('--testing_examples', type=int,
                     help='number of testing examples to show',
