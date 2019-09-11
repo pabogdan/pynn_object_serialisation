@@ -21,6 +21,13 @@ N_layer = get_input_size(args.model)
 t_stim = args.t_stim
 
 # Do some importing of imagenet testing
+
+from dnns.utilities import ImagenetDataGenerator
+
+data_path =
+
+generator = ImagenetDataGenerator('val', 1, data_path, (32, 32))
+
 (x_train, y_train), (x_test, y_test) = cifar10.load_data()
 
 # reshape input to flatten data
