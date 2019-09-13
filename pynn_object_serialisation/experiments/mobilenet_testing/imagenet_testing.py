@@ -20,18 +20,18 @@ if not os.path.isdir(args.result_dir) and not os.path.exists(args.result_dir):
 N_layer = get_input_size(args.model)
 t_stim = args.t_stim
 
-# Do some importing of imagenet testing
+image_length = int(np.sqrt((N_layer/3)))
+image_size = (image_length, image_length, 3)
 
+#Making the generator for the images
 from dnns.utilities import ImagenetDataGenerator
+data_path = "/localhome/mbax3pb2/ILSVRC"
 
-data_path =
-
-generator = ImagenetDataGenerator('val', 1, data_path, (32, 32))
-
-(x_train, y_train), (x_test, y_test) = cifar10.load_data()
-
+generator = ImagenetDataGenerator('val', args.testing_examples, data_path, image_size)
+gen = generator()
+x_test, y_test = gen.__next__()
 # reshape input to flatten data
-x_train = x_train.reshape(x_train.shape[0], np.prod(x_train.shape[1:]))
+#x_train = x_train.reshape(x_train.shape[0], np.prod(x_train.shape[1:]))
 x_test = x_test.reshape(x_test.shape[0], np.prod(x_test.shape[1:]))
 
 if args.testing_examples:
@@ -44,8 +44,7 @@ number_of_slots = int(runtime / t_stim)
 range_of_slots = np.arange(number_of_slots)
 starts = np.ones((N_layer, number_of_slots)) * (range_of_slots * t_stim)
 durations = np.ones((N_layer, number_of_slots)) * t_stim
-# rates = np.random.randint(1, 5, size=(N_layer, number_of_slots))
-rates = x_test[:testing_examples, :].T
+rates = x_test[:testing_examples].T
 
 # scaling rates
 _0_to_1_rates = rates / float(np.max(rates))
@@ -98,7 +97,7 @@ if args.record_v:
 if args.result_filename:
     results_filename = args.result_filename
 else:
-    results_filename = "cifar10_results"
+    results_filename = "imagenet_results"
     if args.suffix:
         results_filename += args.suffix
     else:
