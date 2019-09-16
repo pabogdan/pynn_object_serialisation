@@ -18,7 +18,7 @@ from pyNN.random import NumpyRNG, RandomDistribution
 from pyNN.utility import Timer
 from pyNN.utility.plotting import Figure, Panel
 import matplotlib.pyplot as plt
-from pynn_object_serialisation.functions import intercept_simulator
+from pynn_object_serialisation.functions import intercept_simulator, restore_simulator_from_file
 
 simulator_name = 'spiNNaker'
 benchmark = 'CUBA'
@@ -201,7 +201,13 @@ print("%d Running simulation..." % node_id)
 print("timings: number of neurons: {}".format(n))
 print("timings: number of synapses: {}".format(n * n * pconn))
 
-intercept_simulator(p)
+intercept_simulator(p, "va_benchmark")
+
+from importlib import reload
+
+p = reload(p)
+populations, projections = restore_simulator_from_file(p, "va_benchmark")
+intercept_simulator(p, "comparison_va_benchmark")
 p.run(tstop)
 
 simCPUTime = timer.diff()

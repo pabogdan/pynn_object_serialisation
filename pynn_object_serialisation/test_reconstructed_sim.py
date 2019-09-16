@@ -26,7 +26,6 @@ try:
 except Exception as e:
     current_error = e
     traceback.print_exc()
-
 end_time = plt.datetime.datetime.now()
 total_time = end_time - start_time
 print("Total time elapsed -- " + str(total_time))
@@ -38,5 +37,6 @@ np.savez_compressed(filename,
                     model_file_path=model_file_path,
                     prune_level=args.prune_level,
                     exception=str(current_error))
+
 if __name__ == "__main__":
     pass
