@@ -6,7 +6,7 @@ from brian2.units import *
 
 runtime = 5000
 sim.setup(timestep=1.0, min_delay=1.0, max_delay=10)
-sim.set_number_of_neurons_per_core(SpikeSourcePoissonVariable, 256 // 16)
+sim.set_number_of_neurons_per_core(SpikeSourcePoissonVariable, 16)
 N_layer = 200  # number of neurons in each population
 
 t_stim = 250
@@ -40,9 +40,9 @@ sim.end()
 from importlib import reload
 
 sim = reload(sim)
-populations, projections = restore_simulator_from_file(sim, "variable_rate_pss")
+populations, projections, _ = restore_simulator_from_file(sim, "variable_rate_pss")
+sim.set_number_of_neurons_per_core(SpikeSourcePoissonVariable, 13)
 intercept_simulator(sim, "comparison_variable_rate_pss")
-sim.set_number_of_neurons_per_core(SpikeSourcePoissonVariable, 256 // 16)
 # PSS recording is not picked up by interception!
 populations[0].record(['spikes'])
 sim.run(runtime)
