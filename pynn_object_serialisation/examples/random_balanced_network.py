@@ -110,7 +110,7 @@ intercept_simulator(sim, "rbn")
 from importlib import reload
 
 sim = reload(sim)
-populations, projections = restore_simulator_from_file(sim, "rbn")
+populations, projections, _ = restore_simulator_from_file(sim, "rbn")
 intercept_simulator(sim, "comparison_rbn")
 sim.run(simtime=sim_time)
 

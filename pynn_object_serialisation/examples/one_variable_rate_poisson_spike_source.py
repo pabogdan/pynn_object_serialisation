@@ -40,7 +40,7 @@ sim.end()
 from importlib import reload
 
 sim = reload(sim)
-populations, projections = restore_simulator_from_file(sim, "variable_rate_pss")
+populations, projections, _ = restore_simulator_from_file(sim, "variable_rate_pss")
 sim.set_number_of_neurons_per_core(SpikeSourcePoissonVariable, 13)
 intercept_simulator(sim, "comparison_variable_rate_pss")
 # PSS recording is not picked up by interception!

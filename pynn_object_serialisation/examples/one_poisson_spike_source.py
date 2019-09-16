@@ -29,7 +29,7 @@ intercept_simulator(sim, "one_pss")
 from importlib import reload
 
 sim = reload(sim)
-populations, projections = restore_simulator_from_file(sim, "one_pss")
+populations, projections, _ = restore_simulator_from_file(sim, "one_pss")
 intercept_simulator(sim, "comparison_one_pss")
 sim.run(runtime)
 sim.end()

@@ -206,7 +206,7 @@ intercept_simulator(p, "va_benchmark")
 from importlib import reload
 
 p = reload(p)
-populations, projections = restore_simulator_from_file(p, "va_benchmark")
+populations, projections, _ = restore_simulator_from_file(p, "va_benchmark")
 intercept_simulator(p, "comparison_va_benchmark")
 p.run(tstop)
 
