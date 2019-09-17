@@ -47,7 +47,16 @@ durations = np.ones((N_layer, number_of_slots)) * t_stim
 rates = x_test[:testing_examples].T
 
 # scaling rates
-_0_to_1_rates = rates / float(np.max(rates))
+print("="*50)
+print("Scaling rates...")
+min_rates = np.min(rates)
+max_rates = np.max(rates)
+_0_to_1_rates = rates - min_rates
+print("rates - min_rates min", np.min(_0_to_1_rates))
+print("rates - min_rates max", np.max(_0_to_1_rates))
+_0_to_1_rates = _0_to_1_rates / float(np.max(_0_to_1_rates))
+print("_0_to_1_rates min", np.min(_0_to_1_rates))
+print("_0_to_1_rates max", np.max(_0_to_1_rates))
 rates = _0_to_1_rates * args.rate_scaling
 
 input_params = {
@@ -55,7 +64,8 @@ input_params = {
     "durations": durations,
     "starts": starts
 }
-
+print("Finished scaling rates...")
+print("="*50)
 # Let's do some reporting about here
 print("Going to put in", testing_examples, "images")
 print("The shape of the rates array is ", rates.shape)
@@ -67,14 +77,15 @@ assert (rates.shape == starts.shape)
 assert (rates.shape[1] == testing_examples)
 
 print("Input image size is expected to be ", image_size)
+print("... i.e. ", np.prod(image_size), "pixels")
 print("Mobilenet generally expects the image size to be ", (224, 224, 3))
 
 print("Min rate", np.min(rates))
 print("Max rate", np.max(rates))
 print("Mean rate", np.mean(rates))
 
-
-
+import sys
+sys.stdout.flush()
 # produce parameter replacement dict
 replace = {
     "tau_syn_E": 0.2,
@@ -93,8 +104,6 @@ sim.set_number_of_neurons_per_core(sim.SpikeSourcePoisson, 16)
 sim.set_number_of_neurons_per_core(sim.IF_curr_exp, 64)
 set_i_offsets(populations, runtime)
 
-import sys
-sys.stdout.flush()
 # set up recordings for other layers if necessary
 for pop in populations[:]:
     pop.record("spikes")
