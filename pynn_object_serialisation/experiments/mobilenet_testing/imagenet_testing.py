@@ -69,8 +69,8 @@ assert (rates.shape[1] == testing_examples)
 print("Input image size is expected to be ", image_size)
 print("Mobilenet generally expects the image size to be ", (224, 224, 3))
 
-print("Min rate", np.minimum(rates))
-print("Max rate", np.maximum(rates))
+print("Min rate", np.min(rates))
+print("Max rate", np.max(rates))
 print("Mean rate", np.mean(rates))
 
 # produce parameter replacement dict
