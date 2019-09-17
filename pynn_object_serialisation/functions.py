@@ -166,6 +166,10 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
             pop_cellparams = connectivity_data[pop_info['cellparams']].ravel()[
                 0]
         elif pop_cellclass is SpikeSourceArray and is_input_vrpss:
+            print("Going to use a VRPSS for this reconstruction ...")
+            print("VRPSS is set to have", pop_info['n_neurons'], "neurons")
+            print("and is labeled as ", pop_info['label'])
+
             pop_cellclass = SpikeSourcePoissonVariable
             pop_cellparams = vrpss_cellparams
         else:

@@ -73,6 +73,8 @@ print("Min rate", np.min(rates))
 print("Max rate", np.max(rates))
 print("Mean rate", np.mean(rates))
 
+
+
 # produce parameter replacement dict
 replace = {
     "tau_syn_E": 0.2,
@@ -91,6 +93,8 @@ sim.set_number_of_neurons_per_core(sim.SpikeSourcePoisson, 16)
 sim.set_number_of_neurons_per_core(sim.IF_curr_exp, 64)
 set_i_offsets(populations, runtime)
 
+import sys
+sys.stdout.flush()
 # set up recordings for other layers if necessary
 for pop in populations[:]:
     pop.record("spikes")
