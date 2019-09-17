@@ -123,7 +123,7 @@ def intercept_simulator(sim, output_filename=None, cellparams=None,
         sys.exit()
 
 
-def restore_simulator_from_file(sim, filename, prune_level=1,
+def restore_simulator_from_file(sim, filename, prune_level=1.,
                                 is_input_vrpss=False,
                                 vrpss_cellparams=None,
                                 replace_params=None):

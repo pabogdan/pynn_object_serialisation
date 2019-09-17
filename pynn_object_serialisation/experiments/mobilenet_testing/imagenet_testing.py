@@ -55,6 +55,24 @@ input_params = {
     "durations": durations,
     "starts": starts
 }
+
+# Let's do some reporting about here
+print("Going to put in", testing_examples, "images")
+print("The shape of the rates array is ", rates.shape)
+print("This shape is supposed to match that of durations ", durations.shape)
+print("... and starts ", starts.shape)
+
+assert (rates.shape == durations.shape)
+assert (rates.shape == starts.shape)
+assert (rates.shape[1] == testing_examples)
+
+print("Input image size is expected to be ", image_size)
+print("Mobilenet generally expects the image size to be ", (224, 224, 3))
+
+print("Min rate", np.minimum(rates))
+print("Max rate", np.maximum(rates))
+print("Mean rate", np.mean(rates))
+
 # produce parameter replacement dict
 replace = {
     "tau_syn_E": 0.2,
@@ -66,17 +84,13 @@ populations, projections, custom_params = restore_simulator_from_file(
     sim, args.model,
     is_input_vrpss=True,
     vrpss_cellparams=input_params,
-    replace_params=replace)
+    replace_params=replace,
+    prune_level=args.conn_level)
 sim.set_number_of_neurons_per_core(SpikeSourcePoissonVariable, 16)
 sim.set_number_of_neurons_per_core(sim.SpikeSourcePoisson, 16)
 sim.set_number_of_neurons_per_core(sim.IF_curr_exp, 64)
 set_i_offsets(populations, runtime)
 
-# if args.test_with_pss:
-#     pss_params = {
-#         'rate'
-#     }
-#     populations.append(sim.Population(sim.SpikeSourcePoisson, ))
 # set up recordings for other layers if necessary
 for pop in populations[:]:
     pop.record("spikes")

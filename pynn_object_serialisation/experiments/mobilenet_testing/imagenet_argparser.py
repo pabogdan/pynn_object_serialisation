@@ -82,4 +82,9 @@ parser.add_argument('--testing_examples', type=int,
                     help='number of testing examples to show',
                     default=None)
 
+
+parser.add_argument('--conn_level', type=float,
+                    help='useful to more quickly load MobileNet '
+                         'onto SpiNNaker', default=1.)
+
 args = parser.parse_args()
