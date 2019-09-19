@@ -4,7 +4,7 @@ import pydoc  # used to retrieve Class from string
 import numpy as np
 import pynn_object_serialisation.serialisation_utils as utils
 from spynnaker8.extra_models import SpikeSourcePoissonVariable
-from spynnaker8 import SpikeSourceArray
+from spynnaker8 import SpikeSourceArray, SpikeSourcePoisson
 
 DEFAULT_RECEPTOR_TYPES = ["excitatory", "inhibitory"]
 
@@ -164,7 +164,10 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
         p_id = pop_info['id']
         pop_cellclass = pydoc.locate(pop_info['cellclass'])
         print("Reconstructing pop", pop_info['label'], "containing",  pop_info['n_neurons'], "neurons")
-        if is_input_vrpss:
+        if is_input_vrpss and (
+                pop_cellclass is SpikeSourcePoissonVariable or
+                pop_cellclass is SpikeSourceArray or
+                pop_cellclass is SpikeSourcePoisson):
 
             print("--Going to use a VRPSS for this reconstruction ...")
             print("--VRPSS is set to have", pop_info['n_neurons'], "neurons")
