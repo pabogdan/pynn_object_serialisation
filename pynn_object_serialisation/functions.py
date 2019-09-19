@@ -158,21 +158,22 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
     except KeyError:
         custom_params = {}
     # set up populations
+    print("Population reconstruction begins...")
     for pop_no in range(no_pops):
         pop_info = json_data['populations'][str(pop_no)]
         p_id = pop_info['id']
         pop_cellclass = pydoc.locate(pop_info['cellclass'])
-        if ((pop_cellclass is SpikeSourcePoissonVariable and is_input_vrpss)
-                or pop_cellclass is SpikeSourceArray and is_input_vrpss):
-            print("Going to use a VRPSS for this reconstruction ...")
-            print("VRPSS is set to have", pop_info['n_neurons'], "neurons")
-            print("and is labeled as ", pop_info['label'])
+        print("Reconstructing pop", pop_info['label'], "containing",  pop_info['n_neurons'], "neurons")
+        if is_input_vrpss:
+
+            print("--Going to use a VRPSS for this reconstruction ...")
+            print("--VRPSS is set to have", pop_info['n_neurons'], "neurons")
+            print("--and is labeled as ", pop_info['label'])
 
             pop_cellclass = SpikeSourcePoissonVariable
             pop_cellparams = vrpss_cellparams
         elif pop_cellclass is SpikeSourcePoissonVariable:
-            pop_cellparams = connectivity_data[pop_info['cellparams']].ravel()[
-                0]
+            pop_cellparams = connectivity_data[pop_info['cellparams']].ravel()[0]
         else:
             pop_cellparams = \
                 connectivity_data[str(p_id)].ravel()[0]
@@ -195,6 +196,7 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
             populations[pop_no].record(recording_variables)
 
     # set up projections
+    print("\n\n\nProjection reconstruction begins...")
     for proj_no in range(no_proj):
         # temporary utility variable
         proj_info = json_data['projections'][str(proj_no)]
@@ -218,6 +220,7 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
         )
 
     connectivity_data.close()
+    print("Reconstruction complete!")
     return populations, projections, custom_params
 
 
