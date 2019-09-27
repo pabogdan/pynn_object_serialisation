@@ -10,7 +10,7 @@ except:
     import pyNN.spiNNaker as sim
 import matplotlib.pyplot as plt
 from pynn_object_serialisation.functions import \
-    restore_simulator_from_file
+    restore_simulator_from_file, set_i_offsets
 from spynnaker8.extra_models import SpikeSourcePoissonVariable
 import numpy as np
 import os
@@ -48,14 +48,11 @@ input_params = {
     "durations": durations,
     "starts": starts
 }
+
+replace = None
 # produce parameter replacement dict
-replace = {
-    "tau_syn_E": 0.1,
-    "tau_syn_I": 0.1,
-    "v_thresh": 1.,
-}
 output_v = []
-populations, projections = restore_simulator_from_file(
+populations, projections, custom_params = restore_simulator_from_file(
     sim, args.model,
     is_input_vrpss=True,
     vrpss_cellparams=input_params,
@@ -63,6 +60,7 @@ populations, projections = restore_simulator_from_file(
 sim.set_number_of_neurons_per_core(SpikeSourcePoissonVariable, 16)
 sim.set_number_of_neurons_per_core(sim.SpikeSourcePoisson, 16)
 sim.set_number_of_neurons_per_core(sim.IF_curr_exp, 64)
+set_i_offsets(populations, runtime)
 # if args.test_with_pss:
 #     pss_params = {
 #         'rate'
@@ -98,12 +96,12 @@ else:
         results_filename += "_" + now.strftime("_%H%M%S_%d%m%Y")
 
 np.savez_compressed(os.path.join(args.result_dir, results_filename),
-                    spikes_dict=spikes_dict,
                     output_v=output_v,
                     neo_spikes_dict=neo_spikes_dict,
                     y_test=y_test,
                     N_layer=N_layer,
                     t_stim=t_stim,
                     runtime=runtime,
-                    sim_time=runtime)
+                    sim_time=runtime,
+                    **spikes_dict)
 sim.end()
