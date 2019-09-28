@@ -79,7 +79,7 @@ parser.add_argument('--testing_examples', type=int,
                     default=DEFAULT_TESTING_EXAMPLES)
 
 def main():
-    args = parser.parse_args()
+    return parser.parse_args()
 
 if __name__ == "__main__":
     main()

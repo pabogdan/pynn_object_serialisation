@@ -58,10 +58,14 @@ def run(args):
     is_input_vrpss=True,
     vrpss_cellparams=input_params,
     replace_params=replace)
+    dt = sim.get_time_step()
+    min_delay = sim.get_min_delay()
+    max_delay = sim.get_max_delay()
     sim.set_number_of_neurons_per_core(SpikeSourcePoissonVariable, 16)
     sim.set_number_of_neurons_per_core(sim.SpikeSourcePoisson, 16)
     sim.set_number_of_neurons_per_core(sim.IF_curr_exp, 64)
-    set_i_offsets(populations, runtime)
+    old_runtime = custom_params['runtime']
+    set_i_offsets(populations, runtime, old_runtime=old_runtime)
     # if args.test_with_pss:
     #     pss_params = {
     #         'rate'
@@ -104,9 +108,11 @@ def run(args):
             t_stim=t_stim,
             runtime=runtime,
             sim_time=runtime,
+            dt = dt,
             **spikes_dict)
     sim.end()
 
 if __name__ == "__main__":
-    from mnist_argparser import args
+    import mnist_argparser
+    args = mnist_argparser.main()
     run(args)
