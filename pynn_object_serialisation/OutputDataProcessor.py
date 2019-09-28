@@ -6,7 +6,6 @@ class OutputDataProcessor():
     alllow for easier processing.
     '''
 
-    
     def __init__(self, path):
         self.data = np.load(path)
         self.spikes_dict = self.reconstruct_spikes_dict()
@@ -16,7 +15,7 @@ class OutputDataProcessor():
         self.t_stim = self.data['t_stim']
         self.runtime = int(self.data['runtime'])
         self.N_layer = int(self.data['N_layer'])
-        self.dt = 1
+        self.dt = self.data['dt']
         self.neo_object = self.data['neo_spikes_dict']
         self.delay = self.get_delay()
         self.input_layer_name = self.layer_names[0]
@@ -25,8 +24,8 @@ class OutputDataProcessor():
         self.input_spikes = self.spikes_dict[self.input_layer_name]
         self.output_spikes = self.spikes_dict[self.output_layer_name]
         self.number_of_examples = self.runtime // self.t_stim
-        self.y_test = np.array(self.data['y_test'][:self.number_of_examples], dtype=np.uint8)
-        self.y_pred = np.array(self.get_batch_predictions(), dtype=np.uint8) 
+        self.y_test = np.array(self.data['y_test'][:self.number_of_examples], dtype=np.int8)
+        self.y_pred = np.array(self.get_batch_predictions(), dtype=np.int8) 
         labels = np.load(
             '/mnt/snntoolbox/snn_toolbox_private/examples/models/05-mobilenet_dwarf_v1/label_names.npz')
         self.label_names = labels['arr_0']
@@ -66,6 +65,7 @@ class OutputDataProcessor():
             'runtime',
             't_stim',
             'neo_spikes_dict',
+            'dt',
             'sim_time']
         unexpected_files = [
             file for file in self.data.files if file not in expected_files]
@@ -82,6 +82,9 @@ class OutputDataProcessor():
         if higher_end_bin_time > self.runtime:
             higher_end_bin_time = self.runtime
             #print('Final bin cut off.')
+        if higher_end_bin_time < lower_end_bin_time:
+            print('Bin out of range of runtime')
+            return self.runtime, self.runtime
         return lower_end_bin_time, higher_end_bin_time
 
     def get_bin_spikes(self, bin_number, layer_name):
@@ -104,7 +107,6 @@ class OutputDataProcessor():
         return self.get_counts(bin_number, layer_name, shape) / self.t_stim
 
     def plot_rates(self, rates, shape = (32, 32, 3)):
-        rates /= rates.max()
         plt.imshow(rates.reshape(shape))
         plt.colorbar()
         plt.show()
