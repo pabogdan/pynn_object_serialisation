@@ -78,4 +78,8 @@ parser.add_argument('--testing_examples', type=int,
                     help='number of testing examples to show',
                     default=DEFAULT_TESTING_EXAMPLES)
 
-args = parser.parse_args()
+def main():
+    args = parser.parse_args()
+
+if __name__ == "__main__":
+    main()
