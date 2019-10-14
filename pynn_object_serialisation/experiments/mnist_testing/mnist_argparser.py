@@ -9,6 +9,7 @@ DEFAULT_RESULT_DIR = 'results/'
 DEFAULT_RATE_SCALING = 1000  # Hz
 DEFAULT_T_STIM = 200  # ms
 DEFAULT_TESTING_EXAMPLES = 10000
+DEFAULT_CHUNK_SIZE = 100
 
 parser = argparse.ArgumentParser(
     description='converted-MNIST argparser',
@@ -77,6 +78,10 @@ parser.add_argument('--t_stim', type=int,
 parser.add_argument('--testing_examples', type=int,
                     help='number of testing examples to show',
                     default=DEFAULT_TESTING_EXAMPLES)
+                    
+parser.add_argument('--chunk_size', type=int,
+                    help='the number of bins per chunk',
+                    default=DEFAULT_CHUNK_SIZE)
 
 def main():
     return parser.parse_args()

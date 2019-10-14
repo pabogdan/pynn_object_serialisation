@@ -72,12 +72,48 @@ def run(args):
     #     }
     #     populations.append(sim.Population(sim.SpikeSourcePoisson, ))
     # set up recordings for other layers if necessary
+    spikes_dict = {}
+    neo_spikes_dict = {}
+    
+    def record_output(populations,offset,output):
+        import pdb; pdb.set_trace()
+        spikes = populations[-1].spinnaker_get_data('spikes')
+        spikes = spikes + [0,offset]
+        name = populations[-1].label
+        if np.shape(spikes)[0]>0:
+            if name in list(output.keys()):
+                output[name] = np.concatenate((output,spikes))
+            else:
+                output[name] = spikes 
+        return output
+
+    #number of ms to simulate in a chunk
+    chunk_time = t_stim 
+    number_chunks = runtime // chunk_time
+    remainder_chunk_time = runtime % chunk_time
+    '''
+    for i in range(number_chunks):
+        for pop in populations[:]:
+            pop.record("spikes")
+        if args.record_v:
+            populations[-1].record("v")
+        sim.run(chunk_time)
+        spikes_dict = record_output(populations, i*chunk_time, spikes_dict)
+        sim.reset()
+    if remainder_chunk_time != 0:
+        #After a sim reset the vrpss needs to have its inputs readded 
+        for pop in populations[:]:
+            pop.record("spikes")
+        if args.record_v:
+            populations[-1].record("v")
+
+        sim.run(remainder_chunk_time)
+        spikes_dict = record_output(populations, i*chunk_time, spikes_dict)
+    '''
     for pop in populations[:]:
         pop.record("spikes")
     if args.record_v:
         populations[-1].record("v")
-    spikes_dict = {}
-    neo_spikes_dict = {}
     sim.run(runtime)
     for pop in populations[:]:
         spikes_dict[pop.label] = pop.spinnaker_get_data('spikes')
@@ -87,7 +123,7 @@ def run(args):
     if args.record_v:
         output_v = populations[-1].spinnaker_get_data('v')
     # save results
-
+        
     if args.result_filename:
         results_filename = args.result_filename
     else:
