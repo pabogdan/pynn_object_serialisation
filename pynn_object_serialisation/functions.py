@@ -4,7 +4,7 @@ import pydoc  # used to retrieve Class from string
 import numpy as np
 import pynn_object_serialisation.serialisation_utils as utils
 from spynnaker8.extra_models import SpikeSourcePoissonVariable
-from spynnaker8 import SpikeSourceArray
+from spynnaker8 import SpikeSourceArray, SpikeSourcePoisson
 
 DEFAULT_RECEPTOR_TYPES = ["excitatory", "inhibitory"]
 
@@ -52,7 +52,7 @@ def intercept_simulator(sim, output_filename=None, cellparams=None,
         else:
             _population_id_to_parameters[str(p_id)] = \
                 utils._trundle_through_neuron_information(
-                pop)
+                    pop)
         _id_to_count[id(pop)] = count
         # TODO extra info for PSS
 
@@ -123,7 +123,7 @@ def intercept_simulator(sim, output_filename=None, cellparams=None,
         sys.exit()
 
 
-def restore_simulator_from_file(sim, filename, prune_level=1,
+def restore_simulator_from_file(sim, filename, prune_level=1.,
                                 is_input_vrpss=False,
                                 vrpss_cellparams=None,
                                 replace_params=None):
@@ -158,16 +158,25 @@ def restore_simulator_from_file(sim, filename, prune_level=1,
     except KeyError:
         custom_params = {}
     # set up populations
+    print("Population reconstruction begins...")
     for pop_no in range(no_pops):
         pop_info = json_data['populations'][str(pop_no)]
         p_id = pop_info['id']
         pop_cellclass = pydoc.locate(pop_info['cellclass'])
-        if pop_cellclass is SpikeSourcePoissonVariable:
-            pop_cellparams = connectivity_data[pop_info['cellparams']].ravel()[
-                0]
-        elif pop_cellclass is SpikeSourceArray and is_input_vrpss:
+        print("Reconstructing pop", pop_info['label'], "containing",  pop_info['n_neurons'], "neurons")
+        if is_input_vrpss and (
+                pop_cellclass is SpikeSourcePoissonVariable or
+                pop_cellclass is SpikeSourceArray or
+                pop_cellclass is SpikeSourcePoisson):
+
+            print("--Going to use a VRPSS for this reconstruction ...")
+            print("--VRPSS is set to have", pop_info['n_neurons'], "neurons")
+            print("--and is labeled as ", pop_info['label'])
+
             pop_cellclass = SpikeSourcePoissonVariable
             pop_cellparams = vrpss_cellparams
+        elif pop_cellclass is SpikeSourcePoissonVariable:
+            pop_cellparams = connectivity_data[pop_info['cellparams']].ravel()[0]
         else:
             pop_cellparams = \
                 connectivity_data[str(p_id)].ravel()[0]
@@ -190,6 +199,7 @@ def restore_simulator_from_file(sim, filename, prune_level=1,
             populations[pop_no].record(recording_variables)
 
     # set up projections
+    print("\n\n\nProjection reconstruction begins...")
     for proj_no in range(no_proj):
         # temporary utility variable
         proj_info = json_data['projections'][str(proj_no)]
@@ -213,11 +223,11 @@ def restore_simulator_from_file(sim, filename, prune_level=1,
         )
 
     connectivity_data.close()
+    print("Reconstruction complete!")
     return populations, projections, custom_params
 
 
 def get_input_size(sim):
-
     if isinstance(sim, str):
         # Load the data from disk
         with open(sim + ".json", "r") as read_file:

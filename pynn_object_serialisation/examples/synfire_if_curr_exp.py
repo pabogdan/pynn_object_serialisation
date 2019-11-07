@@ -55,7 +55,7 @@ intercept_simulator(p, "sim_synfire_if_curr_exp")
 from importlib import reload
 
 p = reload(p)
-populations, projections = restore_simulator_from_file(p, "sim_synfire_if_curr_exp")
+populations, projections, _ = restore_simulator_from_file(p, "sim_synfire_if_curr_exp")
 intercept_simulator(p, "comparison_sim_synfire_if_curr_exp")
 p.run(runtime)
 

@@ -20,18 +20,18 @@ if not os.path.isdir(args.result_dir) and not os.path.exists(args.result_dir):
 N_layer = get_input_size(args.model)
 t_stim = args.t_stim
 
-# Do some importing of imagenet testing
+image_length = int(np.sqrt((N_layer/3)))
+image_size = (image_length, image_length, 3)
 
+#Making the generator for the images
 from dnns.utilities import ImagenetDataGenerator
+data_path = "/localhome/mbax3pb2/ILSVRC"
 
-data_path =
-
-generator = ImagenetDataGenerator('val', 1, data_path, (32, 32))
-
-(x_train, y_train), (x_test, y_test) = cifar10.load_data()
-
+generator = ImagenetDataGenerator('val', args.testing_examples, data_path, image_size)
+gen = generator()
+x_test, y_test = gen.__next__()
 # reshape input to flatten data
-x_train = x_train.reshape(x_train.shape[0], np.prod(x_train.shape[1:]))
+#x_train = x_train.reshape(x_train.shape[0], np.prod(x_train.shape[1:]))
 x_test = x_test.reshape(x_test.shape[0], np.prod(x_test.shape[1:]))
 
 if args.testing_examples:
@@ -44,11 +44,19 @@ number_of_slots = int(runtime / t_stim)
 range_of_slots = np.arange(number_of_slots)
 starts = np.ones((N_layer, number_of_slots)) * (range_of_slots * t_stim)
 durations = np.ones((N_layer, number_of_slots)) * t_stim
-# rates = np.random.randint(1, 5, size=(N_layer, number_of_slots))
-rates = x_test[:testing_examples, :].T
+rates = x_test[:testing_examples].T
 
 # scaling rates
-_0_to_1_rates = rates / float(np.max(rates))
+print("="*50)
+print("Scaling rates...")
+min_rates = np.min(rates)
+max_rates = np.max(rates)
+_0_to_1_rates = rates - min_rates
+print("rates - min_rates min", np.min(_0_to_1_rates))
+print("rates - min_rates max", np.max(_0_to_1_rates))
+_0_to_1_rates = _0_to_1_rates / float(np.max(_0_to_1_rates))
+print("_0_to_1_rates min", np.min(_0_to_1_rates))
+print("_0_to_1_rates max", np.max(_0_to_1_rates))
 rates = _0_to_1_rates * args.rate_scaling
 
 input_params = {
@@ -56,6 +64,28 @@ input_params = {
     "durations": durations,
     "starts": starts
 }
+print("Finished scaling rates...")
+print("="*50)
+# Let's do some reporting about here
+print("Going to put in", testing_examples, "images")
+print("The shape of the rates array is ", rates.shape)
+print("This shape is supposed to match that of durations ", durations.shape)
+print("... and starts ", starts.shape)
+
+assert (rates.shape == durations.shape)
+assert (rates.shape == starts.shape)
+assert (rates.shape[1] == testing_examples)
+
+print("Input image size is expected to be ", image_size)
+print("... i.e. ", np.prod(image_size), "pixels")
+print("Mobilenet generally expects the image size to be ", (224, 224, 3))
+
+print("Min rate", np.min(rates))
+print("Max rate", np.max(rates))
+print("Mean rate", np.mean(rates))
+
+import sys
+sys.stdout.flush()
 # produce parameter replacement dict
 replace = {
     "tau_syn_E": 0.2,
@@ -67,17 +97,13 @@ populations, projections, custom_params = restore_simulator_from_file(
     sim, args.model,
     is_input_vrpss=True,
     vrpss_cellparams=input_params,
-    replace_params=replace)
+    replace_params=replace,
+    prune_level=args.conn_level)
 sim.set_number_of_neurons_per_core(SpikeSourcePoissonVariable, 16)
 sim.set_number_of_neurons_per_core(sim.SpikeSourcePoisson, 16)
 sim.set_number_of_neurons_per_core(sim.IF_curr_exp, 64)
 set_i_offsets(populations, runtime)
 
-# if args.test_with_pss:
-#     pss_params = {
-#         'rate'
-#     }
-#     populations.append(sim.Population(sim.SpikeSourcePoisson, ))
 # set up recordings for other layers if necessary
 for pop in populations[:]:
     pop.record("spikes")
@@ -98,7 +124,7 @@ if args.record_v:
 if args.result_filename:
     results_filename = args.result_filename
 else:
-    results_filename = "cifar10_results"
+    results_filename = "imagenet_results"
     if args.suffix:
         results_filename += args.suffix
     else:

@@ -6,19 +6,16 @@ class OutputDataProcessor():
     alllow for easier processing.
     '''
 
-    
     def __init__(self, path):
         self.data = np.load(path)
         self.spikes_dict = self.reconstruct_spikes_dict()
         self.layer_names = list(self.spikes_dict.keys())
         self.order_layer_names()
-        self.input_layer_name = 'InputLayer'
-        self.output_layer_name = self.layer_names[-1]
-        self.y_test = self.data['y_test']
+        
         self.t_stim = self.data['t_stim']
         self.runtime = int(self.data['runtime'])
         self.N_layer = int(self.data['N_layer'])
-        self.dt = 1
+        self.dt = self.data['dt']
         self.neo_object = self.data['neo_spikes_dict']
         self.delay = self.get_delay()
         self.input_layer_name = self.layer_names[0]
@@ -26,9 +23,9 @@ class OutputDataProcessor():
         self.input_layer_shape = (32, 32, 3)
         self.input_spikes = self.spikes_dict[self.input_layer_name]
         self.output_spikes = self.spikes_dict[self.output_layer_name]
-        self.last_but_one_layer = self.layer_names[-2]
         self.number_of_examples = self.runtime // self.t_stim
-        self.y_pred = self.get_batch_predictions() 
+        self.y_test = np.array(self.data['y_test'][:self.number_of_examples], dtype=np.int8)
+        self.y_pred = np.array(self.get_batch_predictions(), dtype=np.int8) 
         labels = np.load(
             '/mnt/snntoolbox/snn_toolbox_private/examples/models/05-mobilenet_dwarf_v1/label_names.npz')
         self.label_names = labels['arr_0']
@@ -38,10 +35,17 @@ class OutputDataProcessor():
             '/mnt/snntoolbox/snn_toolbox_private/examples/models/05-mobilenet_dwarf_v1/x_test.npz')
         self.x_test = x_test_file['arr_0']
         x_test_file.close()
+        
+        self.accuracy = self.get_accuracy()
+
+    def get_accuracy(self):
+        import numpy as np 
+        correct_count = np.count_nonzero(self.y_test[:self.number_of_examples] == self.y_pred)
+        return correct_count /self.number_of_examples
 
     def order_layer_names(self):
         self.layer_names.sort()
-        self.layer_names[0] = self.layer_names.pop(-1)
+        self.layer_names.insert(0, self.layer_names.pop(-1))
         
     def get_shape_from_name(name):
         shape_string = name.split('_')
@@ -61,6 +65,7 @@ class OutputDataProcessor():
             'runtime',
             't_stim',
             'neo_spikes_dict',
+            'dt',
             'sim_time']
         unexpected_files = [
             file for file in self.data.files if file not in expected_files]
@@ -76,7 +81,10 @@ class OutputDataProcessor():
         higher_end_bin_time = (bin_number + 1) * self.t_stim + self.delay
         if higher_end_bin_time > self.runtime:
             higher_end_bin_time = self.runtime
-            print('Final bin cut off.')
+            #print('Final bin cut off.')
+        if higher_end_bin_time < lower_end_bin_time:
+            print('Bin out of range of runtime')
+            return self.runtime, self.runtime
         return lower_end_bin_time, higher_end_bin_time
 
     def get_bin_spikes(self, bin_number, layer_name):
@@ -99,7 +107,6 @@ class OutputDataProcessor():
         return self.get_counts(bin_number, layer_name, shape) / self.t_stim
 
     def plot_rates(self, rates, shape = (32, 32, 3)):
-        rates /= rates.max()
         plt.imshow(rates.reshape(shape))
         plt.colorbar()
         plt.show()
