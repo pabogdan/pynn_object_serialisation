@@ -101,6 +101,9 @@ class OutputDataProcessor():
         output = np.asarray(output).astype(int)
         return output
     
+    def get_all_spikes(self, layer=0):
+        return self.get_spikes(0, self.runtime, layer)
+
     def get_bin_spikes(self, bin_number, layer_name):
         '''Returns the spike train data for a given layer and bin'''
         bounds = self.get_bounds(bin_number)
@@ -161,6 +164,7 @@ class OutputDataProcessor():
 def main():
     p = OutputDataProcessor('/home/edwardjones/git/snn_toolbox_private/examples/raw_data_file.npz')
     print(p.get_batch_predictions())
+    print(p.get_all_spikes(p.layer_names[0]))
     p.plot_bin(1,p.layer_names[0], (28,28))
     
 if __name__ == "__main__":
