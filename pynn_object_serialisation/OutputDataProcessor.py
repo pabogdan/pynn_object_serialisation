@@ -45,6 +45,9 @@ class OutputDataProcessor():
 #         
 #         self.accuracy = self.get_accuracy()
 
+    def summary(self):
+        print(self.layer_names)
+
     def get_accuracy(self):
         import numpy as np 
         correct_count = np.count_nonzero(self.y_test[:self.batch_size] == self.y_pred)
