@@ -12,6 +12,8 @@ from pynn_object_serialisation.functions import \
 from spynnaker8.extra_models import SpikeSourcePoissonVariable
 import numpy as np
 import os
+#Making the generator for the images
+from keras_rewiring.utilities.imagenet_utils import ImagenetDataGenerator
 
 # Checking directory structure exists
 if not os.path.isdir(args.result_dir) and not os.path.exists(args.result_dir):
@@ -23,8 +25,6 @@ t_stim = args.t_stim
 image_length = int(np.sqrt((N_layer/3)))
 image_size = (image_length, image_length, 3)
 
-#Making the generator for the images
-from dnns.utilities import ImagenetDataGenerator
 data_path = "/localhome/mbax3pb2/ILSVRC"
 
 generator = ImagenetDataGenerator('val', args.testing_examples, data_path, image_size)
