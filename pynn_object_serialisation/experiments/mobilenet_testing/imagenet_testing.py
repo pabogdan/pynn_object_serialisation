@@ -12,7 +12,7 @@ from pynn_object_serialisation.functions import \
 from spynnaker8.extra_models import SpikeSourcePoissonVariable
 import numpy as np
 import os
-#Making the generator for the images
+# Making the generator for the images
 from keras_rewiring.utilities.imagenet_utils import ImagenetDataGenerator
 
 # Checking directory structure exists
@@ -22,7 +22,7 @@ if not os.path.isdir(args.result_dir) and not os.path.exists(args.result_dir):
 N_layer = get_input_size(args.model)
 t_stim = args.t_stim
 
-image_length = int(np.sqrt((N_layer/3)))
+image_length = int(np.sqrt((N_layer / 3)))
 image_size = (image_length, image_length, 3)
 
 data_path = args.data_dir
@@ -32,12 +32,11 @@ print("Experiment mini-report")
 print("-" * 80)
 print("Number of testing examples to use:", args.testing_examples)
 
-
 generator = ImagenetDataGenerator('val', args.testing_examples, data_path, image_size)
 gen = generator()
 x_test, y_test = gen.__next__()
 # reshape input to flatten data
-#x_train = x_train.reshape(x_train.shape[0], np.prod(x_train.shape[1:]))
+# x_train = x_train.reshape(x_train.shape[0], np.prod(x_train.shape[1:]))
 x_test = x_test.reshape(x_test.shape[0], np.prod(x_test.shape[1:]))
 
 runtime = args.testing_examples * t_stim
@@ -48,7 +47,7 @@ durations = np.ones((N_layer, number_of_slots)) * t_stim
 rates = x_test[:args.testing_examples].T
 
 # scaling rates
-print("="*50)
+print("=" * 80)
 print("Scaling rates...")
 min_rates = np.min(rates)
 max_rates = np.max(rates)
@@ -66,7 +65,7 @@ input_params = {
     "starts": starts
 }
 print("Finished scaling rates...")
-print("="*50)
+print("=" * 80)
 # Let's do some reporting about here
 print("Going to put in", args.testing_examples, "images")
 print("The shape of the rates array is ", rates.shape)
@@ -86,6 +85,7 @@ print("Max rate", np.max(rates))
 print("Mean rate", np.mean(rates))
 print("=" * 80)
 import sys
+
 sys.stdout.flush()
 # produce parameter replacement dict
 replace = {
