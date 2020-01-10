@@ -2,7 +2,7 @@ import argparse
 
 DEFAULT_MODEL_DIR = 'models/'
 DEFAULT_RESULT_DIR = 'results/'
-DEFAULT_DATA_DIR = 'data/'
+DEFAULT_DATA_DIR = '/ILSVRC/'
 
 DEFAULT_RATE_SCALING = 1000  # Hz
 DEFAULT_T_STIM = 200  # ms
@@ -38,18 +38,6 @@ parser.add_argument('--test_with_pss',
                     action="store_true")
 
 
-parser.add_argument('--optimizer', type=str,
-                    help='optimizer to use', default='sgd')
-
-parser.add_argument('--dataset', type=str,
-                    help='dataset for training and testing', default='cifar10')
-
-parser.add_argument('--activation', type=str,
-                    help='activation type', default='relu')
-
-parser.add_argument('--loss', type=str,
-                    help='loss function', default='mse')
-
 parser.add_argument('--suffix', type=str,
                     help='loss function', default=None)
 
@@ -74,8 +62,6 @@ parser.add_argument('--rate_scaling', type=float,
 parser.add_argument('--t_stim', type=int,
                     help='how long to present single patterns',
                     default=DEFAULT_T_STIM)
-
-
 
 
 parser.add_argument('--conn_level', type=float,

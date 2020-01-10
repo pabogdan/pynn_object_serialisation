@@ -25,7 +25,7 @@ t_stim = args.t_stim
 image_length = int(np.sqrt((N_layer/3)))
 image_size = (image_length, image_length, 3)
 
-data_path = "/localhome/mbax3pb2/ILSVRC"
+data_path = args.data_dir
 
 print("=" * 80)
 print("Experiment mini-report")
