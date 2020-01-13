@@ -1,5 +1,9 @@
 /.project
 /.pydevproject
 */__pycache__
-*/reports
+**/reports
 */results
+**/application_generated_data_files/
+*.pyc
+*.npz
+*.json
