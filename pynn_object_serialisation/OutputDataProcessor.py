@@ -38,6 +38,10 @@ class OutputDataProcessor():
         
         self.accuracy = self.get_accuracy()
 
+    def summary(self):
+        print(self.layer_names)
+        print(self.number_of_examples)
+
     def get_accuracy(self):
         import numpy as np 
         correct_count = np.count_nonzero(self.y_test[:self.number_of_examples] == self.y_pred)
