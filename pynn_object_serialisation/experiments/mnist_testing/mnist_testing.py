@@ -76,7 +76,6 @@ def run(args):
     neo_spikes_dict = {}
     
     def record_output(populations,offset,output):
-        import pdb; pdb.set_trace()
         spikes = populations[-1].spinnaker_get_data('spikes')
         spikes = spikes + [0,offset]
         name = populations[-1].label
@@ -114,7 +113,17 @@ def run(args):
         pop.record("spikes")
     if args.record_v:
         populations[-1].record("v")
-    sim.run(runtime)
+
+    def reset_membrane_voltage():        
+        for population in populations[1:]:
+            population.set(v=0)
+        return
+    
+    for population in populations[1:]:
+        population.initialize(v=0) 
+    for presentation in range(testing_examples):
+        sim.run(t_stim)
+        reset_membrane_voltage()
     for pop in populations[:]:
         spikes_dict[pop.label] = pop.spinnaker_get_data('spikes')
     # the following takes more time than spinnaker_get_data
