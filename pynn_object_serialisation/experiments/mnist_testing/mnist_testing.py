@@ -50,13 +50,19 @@ def run(args):
     "starts": starts
     }
 
+    def get_input_param_chunk(input_params, index):
+        rate=[input_params['rates'][index]]
+        duration=[input_params['durations'][index]]
+        start=[input_params['starts'][index]]
+        return {"rates":rate, "durations":duration, "starts":start}
+
     replace = None
     # produce parameter replacement dict
     output_v = []
     populations, projections, custom_params = restore_simulator_from_file(
     sim, args.model,
     is_input_vrpss=True,
-    vrpss_cellparams=input_params,
+    vrpss_cellparams=get_input_params_chunk(input_params,0),
     replace_params=replace)
     dt = sim.get_time_step()
     min_delay = sim.get_min_delay()
@@ -66,17 +72,10 @@ def run(args):
     sim.set_number_of_neurons_per_core(sim.IF_curr_exp, 64)
     old_runtime = custom_params['runtime']
     set_i_offsets(populations, runtime, old_runtime=old_runtime)
-    # if args.test_with_pss:
-    #     pss_params = {
-    #         'rate'
-    #     }
-    #     populations.append(sim.Population(sim.SpikeSourcePoisson, ))
-    # set up recordings for other layers if necessary
     spikes_dict = {}
     neo_spikes_dict = {}
     
     def record_output(populations,offset,output):
-        import pdb; pdb.set_trace()
         spikes = populations[-1].spinnaker_get_data('spikes')
         spikes = spikes + [0,offset]
         name = populations[-1].label
@@ -87,34 +86,16 @@ def run(args):
                 output[name] = spikes 
         return output
 
-    #number of ms to simulate in a chunk
-    chunk_time = t_stim 
-    number_chunks = runtime // chunk_time
-    remainder_chunk_time = runtime % chunk_time
-    '''
-    for i in range(number_chunks):
-        for pop in populations[:]:
-            pop.record("spikes")
-        if args.record_v:
-            populations[-1].record("v")
-        sim.run(chunk_time)
-        spikes_dict = record_output(populations, i*chunk_time, spikes_dict)
-        sim.reset()
-    if remainder_chunk_time != 0:
-        #After a sim reset the vrpss needs to have its inputs readded 
-        for pop in populations[:]:
-            pop.record("spikes")
-        if args.record_v:
-            populations[-1].record("v")
-
-        sim.run(remainder_chunk_time)
-        spikes_dict = record_output(populations, i*chunk_time, spikes_dict)
-    '''
     for pop in populations[:]:
         pop.record("spikes")
     if args.record_v:
         populations[-1].record("v")
-    sim.run(runtime)
+    for example in range(testing_examples):
+        sim.run(runtime)
+        sim.reset()
+        if example >= testing_examples-1:
+            continue
+        populations[0].set(**get_input_param_chunk(input_params, example+1)
     for pop in populations[:]:
         spikes_dict[pop.label] = pop.spinnaker_get_data('spikes')
     # the following takes more time than spinnaker_get_data
