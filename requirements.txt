@@ -1,0 +1,9 @@
+numpy
+scipy
+pynn
+keras
+keras_rewiring
+matplotlib
+tensorflow
+argparse
+pillow

@@ -1,6 +1,6 @@
 import keras
 # usual sPyNNaker imports
-from imagenet_argparser import args
+from pynn_object_serialisation.imagenet_argparser import args
 
 try:
     import spynnaker8 as sim
