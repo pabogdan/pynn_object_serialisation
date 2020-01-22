@@ -1,12 +1,10 @@
-import keras
 # usual sPyNNaker imports
-from pynn_object_serialisation.imagenet_argparser import args
+from pynn_object_serialisation.experiments.mobilenet_testing.imagenet_argparser import args
 
 try:
     import spynnaker8 as sim
 except Exception:
     import pyNN.spiNNaker as sim
-import matplotlib.pyplot as plt
 from pynn_object_serialisation.functions import \
     restore_simulator_from_file, get_rescaled_i_offset, set_i_offsets, get_input_size
 from spynnaker8.extra_models import SpikeSourcePoissonVariable
