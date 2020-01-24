@@ -153,10 +153,10 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
               setup_params['max_delay'])
     # could set global constraints TODO
     # TODO resolve the hack below
-    sim.set_number_of_neurons_per_core(SpikeSourcePoissonVariable, 16)
-    sim.set_number_of_neurons_per_core(SpikeSourcePoissonVariable, 16)
-    sim.set_number_of_neurons_per_core(sim.SpikeSourcePoisson, 16)
-    sim.set_number_of_neurons_per_core(sim.IF_curr_exp, 128)
+    # sim.set_number_of_neurons_per_core(SpikeSourcePoissonVariable, 16)
+    # sim.set_number_of_neurons_per_core(SpikeSourcePoissonVariable, 16)
+    # sim.set_number_of_neurons_per_core(sim.SpikeSourcePoisson, 16)
+    # sim.set_number_of_neurons_per_core(sim.IF_curr_exp, 128)
 
     try:
         custom_params = json_data['custom_params']
