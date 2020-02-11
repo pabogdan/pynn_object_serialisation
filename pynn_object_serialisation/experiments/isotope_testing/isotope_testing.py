@@ -44,12 +44,9 @@ def run(args):
     
     x_train = np.load("dataset/x_train.npz")['arr_0']
     y_train = np.load("dataset/y_train.npz")['arr_0']
-    #These have no background class
     x_test = np.load("dataset/x_test.npz")['arr_0']
     y_test = np.load("dataset/y_test.npz")['arr_0']
-    #These have background class
-    x_test_full = np.load("dataset/x_test_full.npz")['arr_0']
-    y_test_full = np.load("dataset/y_test_full.npz")['arr_0']
+
     
     labels = np.load("dataset/labels.npz", allow_pickle=True)['arr_0']
     
@@ -62,7 +59,19 @@ def run(args):
     example = x_test[1] # Just doing the first one
     # Generate input params from data
     input_params = convert_rate_array_to_VRPSS(example, runtime)
+    
+    from radioisotopedatatoolbox.DataGenerator import RandomIsotopeFlyBys as rfb
+    
+    from pathlib import Path
+    from os import getcwd
+    path = str(Path(getcwd()).parent) + '/'
+    
+    path = "/home/edwardjones/git/RadioisotopeDataToolbox/"
 
+    flybys = rfb(1, data_path=path)
+    
+    input_params = {key:value for (key,value) in flybys.flybys.items() if key != "distances"}
+    
     output_v = []
     populations, projections, custom_params = restore_simulator_from_file(
         sim, args.model,
@@ -132,6 +141,12 @@ def run(args):
 
 
 if __name__ == "__main__":
-    import isotope_argparser
-    args = isotope_argparser.main()
-    run(args)
+    #import isotope_argparser
+    #args = isotope_argparser.main()
+#     run(args)
+    from pynn_object_serialisation.OutputDataProcessor import OutputDataProcessor
+    
+    proc = OutputDataProcessor("results/flyby_test.npz")
+    
+    proc.plot_bin(0, proc.layer_names[-1], (1,6))
+    
