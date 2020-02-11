@@ -13,7 +13,14 @@ setup(
     dependency_links=[],
 
     install_requires=["numpy",
-                      "pynn",],
+                      "scipy",
+                      "pynn",
+                      "keras",
+                      "keras_rewiring",
+                      "matplotlib",
+                      "tensorflow",
+                      "argparse",
+                      "pillow"],
     classifiers=[
         "Development Status :: 3 - Alpha",
 
@@ -25,11 +32,13 @@ setup(
 
         "Programming Language :: Python :: 2"
         "Programming Language :: Python :: 2.7"
-        
-        
+
+
         "Programming Language :: Python :: 3"
         "Programming Language :: Python :: 3.6"
-        
+        "Programming Language :: Python :: 3.6"
+        "Programming Language :: Python :: 3.7"
+
         "Topic :: Scientific/Engineering",
     ]
 )
