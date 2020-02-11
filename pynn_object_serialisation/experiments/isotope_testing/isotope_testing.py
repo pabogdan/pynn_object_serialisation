@@ -60,17 +60,24 @@ def run(args):
     # Generate input params from data
     input_params = convert_rate_array_to_VRPSS(example, runtime)
     
-    from radioisotopedatatoolbox.DataGenerator import RandomIsotopeFlyBys as rfb
+    from radioisotopedatatoolbox.DataGenerator import IsotopeRateFetcher, BackgroundRateFetcher, LinearMovementIsotope
     
     from pathlib import Path
     from os import getcwd
     path = str(Path(getcwd()).parent) + '/'
     
     path = "/home/edwardjones/git/RadioisotopeDataToolbox/"
-
-    flybys = rfb(1, data_path=path)
     
-    input_params = {key:value for (key,value) in flybys.flybys.items() if key != "distances"}
+    myisotope = IsotopeRateFetcher('Co-60', data_path=path, intensity=100000)
+    background = BackgroundRateFetcher(intensity=1, data_path=path)
+
+    moving_isotope = LinearMovementIsotope(
+        myisotope, background=background, path_limits=[-2, 2],
+        duration=t_stim, min_distance=0.1)
+    
+    input_params = moving_isotope.output
+    del input_params['distances']
+
     
     output_v = []
     populations, projections, custom_params = restore_simulator_from_file(
@@ -108,13 +115,11 @@ def run(args):
     sim.run(runtime)
     for pop in populations[:]:
         spikes_dict[pop.label] = pop.spinnaker_get_data('spikes')
-    # the following takes more time than spinnaker_get_data
-    # for pop in populations[:]:
-    #     neo_spikes_dict[pop.label] = pop.get_data('spikes')
+
     if args.record_v:
         output_v = populations[-1].spinnaker_get_data('v')
     # save results
-
+    sim.end()
     if args.result_filename:
         results_filename = args.result_filename
     else:
@@ -141,12 +146,12 @@ def run(args):
 
 
 if __name__ == "__main__":
-    #import isotope_argparser
-    #args = isotope_argparser.main()
-#     run(args)
+    import isotope_argparser
+    args = isotope_argparser.main()
+    run(args)
+
     from pynn_object_serialisation.OutputDataProcessor import OutputDataProcessor
     
     proc = OutputDataProcessor("results/flyby_test.npz")
-    
-    proc.plot_bin(0, proc.layer_names[-1], (1,6))
+    proc.plot_spikes(0, 0)
     
