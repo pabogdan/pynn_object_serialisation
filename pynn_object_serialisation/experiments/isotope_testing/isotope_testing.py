@@ -15,6 +15,22 @@ from radioisotopedatatoolbox.DataGenerator import RandomIsotopeFlyBys
 import numpy as np
 import os
 
+def convert_rate_array_to_VRPSS(input_rates: np.array, duration=1000):
+    number_of_examples = input_rates.shape[0]
+    number_of_input_neurons = input_rates.shape[1]
+    input_rates = np.ravel(input_rates)
+    run_duration = number_of_examples * duration
+    start_values = np.array(
+        [range(0, run_duration, duration)] * number_of_input_neurons)
+    start_values = np.ravel(start_values.T)
+    durations = np.repeat(duration,
+                          number_of_examples * number_of_input_neurons)
+
+    return {
+        'rates': input_rates,
+        'starts': start_values,
+        'durations': durations}
+
 
 def run(args):
 
@@ -24,30 +40,29 @@ def run(args):
             args.result_dir):
         os.mkdir(args.result_dir)
 
-    data_generator = RandomIsotopeFlyBys(
-        args.testing_examples,
-        data_path='/home/edwardjones/git/RadioisotopeDataToolbox/')
-    x_test = data_generator.flybys
-    y_labels = data_generator.selected_sources_labels
-    reference_labels = np.load('labels.npz', allow_pickle=True)[
-        'arr_0'].astype('U')
-    from radioisotopedatatoolbox.DataGenerator import encode_labels
-    y_test = encode_labels(y_labels, reference_labels)
-    N_layer = x_test['rates'].shape[0]  # number of neurons in each population
-    t_stim = args.t_stim
-
-    runtime = args.testing_examples * t_stim
-    number_of_slots = int(runtime / t_stim)
-    range_of_slots = np.arange(number_of_slots)
-
-    input_params = {
-        "rates": x_test['rates'],
-        "durations": x_test['durations'],
-        "starts": x_test['starts']
-    }
-
+    # Load data from file
+    
+    x_train = np.load("dataset/x_train.npz")['arr_0']
+    y_train = np.load("dataset/y_train.npz")['arr_0']
+    #These have no background class
+    x_test = np.load("dataset/x_test.npz")['arr_0']
+    y_test = np.load("dataset/y_test.npz")['arr_0']
+    #These have background class
+    x_test_full = np.load("dataset/x_test_full.npz")['arr_0']
+    y_test_full = np.load("dataset/y_test_full.npz")['arr_0']
+    
+    labels = np.load("dataset/labels.npz", allow_pickle=True)['arr_0']
+    
+    # Produce parameter replacement dict
     replace = None
-    # produce parameter replacement dict
+     
+       
+    t_stim = args.t_stim
+    runtime = t_stim * args.testing_examples
+    example = x_test[1] # Just doing the first one
+    # Generate input params from data
+    input_params = convert_rate_array_to_VRPSS(example, runtime)
+
     output_v = []
     populations, projections, custom_params = restore_simulator_from_file(
         sim, args.model,
@@ -55,6 +70,7 @@ def run(args):
         vrpss_cellparams=input_params,
         replace_params=replace)
     dt = sim.get_time_step()
+    N_layer = len(populations)
     min_delay = sim.get_min_delay()
     max_delay = sim.get_max_delay()
     sim.set_number_of_neurons_per_core(SpikeSourcePoissonVariable, 16)
@@ -62,18 +78,10 @@ def run(args):
     sim.set_number_of_neurons_per_core(sim.IF_curr_exp, 64)
     old_runtime = custom_params['runtime']
     set_i_offsets(populations, runtime, old_runtime=old_runtime)
-    # if args.test_with_pss:
-    #     pss_params = {
-    #         'rate'
-    #     }
-    #     populations.append(sim.Population(sim.SpikeSourcePoisson, ))
-    # set up recordings for other layers if necessary
     spikes_dict = {}
     neo_spikes_dict = {}
 
     def record_output(populations, offset, output):
-        import pdb
-        pdb.set_trace()
         spikes = populations[-1].spinnaker_get_data('spikes')
         spikes = spikes + [0, offset]
         name = populations[-1].label
@@ -84,29 +92,6 @@ def run(args):
                 output[name] = spikes
         return output
 
-    # number of ms to simulate in a chunk
-    chunk_time = t_stim
-    number_chunks = runtime // chunk_time
-    remainder_chunk_time = runtime % chunk_time
-    '''
-    for i in range(number_chunks):
-        for pop in populations[:]:
-            pop.record("spikes")
-        if args.record_v:
-            populations[-1].record("v")
-        sim.run(chunk_time)
-        spikes_dict = record_output(populations, i*chunk_time, spikes_dict)
-        sim.reset()
-    if remainder_chunk_time != 0:
-        #After a sim reset the vrpss needs to have its inputs readded
-        for pop in populations[:]:
-            pop.record("spikes")
-        if args.record_v:
-            populations[-1].record("v")
-
-        sim.run(remainder_chunk_time)
-        spikes_dict = record_output(populations, i*chunk_time, spikes_dict)
-    '''
     for pop in populations[:]:
         pop.record("spikes")
     if args.record_v:
@@ -124,7 +109,7 @@ def run(args):
     if args.result_filename:
         results_filename = args.result_filename
     else:
-        results_filename = "mnist_results"
+        results_filename = "isotope_results"
         if args.suffix:
             results_filename += args.suffix
         else:
