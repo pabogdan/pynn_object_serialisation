@@ -51,7 +51,7 @@ def run(args):
     labels = np.load("dataset/labels.npz", allow_pickle=True)['arr_0']
     
     # Produce parameter replacement dict
-    replace = None
+    replace = {'tau_m':10}
      
        
     t_stim = args.t_stim
@@ -68,7 +68,7 @@ def run(args):
     
     path = "/home/edwardjones/git/RadioisotopeDataToolbox/"
     
-    myisotope = IsotopeRateFetcher('Co-60', data_path=path, intensity=100000)
+    myisotope = IsotopeRateFetcher('Co-60', data_path=path, intensity=1)
     background = BackgroundRateFetcher(intensity=1, data_path=path)
 
     moving_isotope = LinearMovementIsotope(
@@ -78,13 +78,15 @@ def run(args):
     input_params = moving_isotope.output
     del input_params['distances']
 
+    input_params = {'spike_times':moving_isotope.spike_source_array}
     
     output_v = []
     populations, projections, custom_params = restore_simulator_from_file(
         sim, args.model,
-        is_input_vrpss=True,
-        vrpss_cellparams=input_params,
+        input_type='ssa',
+        ssa_cellparams=input_params,
         replace_params=replace)
+    
     dt = sim.get_time_step()
     N_layer = len(populations)
     min_delay = sim.get_min_delay()
@@ -153,5 +155,5 @@ if __name__ == "__main__":
     from pynn_object_serialisation.OutputDataProcessor import OutputDataProcessor
     
     proc = OutputDataProcessor("results/flyby_test.npz")
-    proc.plot_spikes(0, 0)
+    proc.plot_spikes(0, -1)
     

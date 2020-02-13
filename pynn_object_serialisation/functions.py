@@ -124,16 +124,17 @@ def intercept_simulator(sim, output_filename=None, cellparams=None,
 
 
 def restore_simulator_from_file(sim, filename, prune_level=1.,
-                                is_input_vrpss=False,
+                                input_type = None,
                                 vrpss_cellparams=None,
+                                ssa_cellparams = None,
                                 replace_params=None):
     replace_params = replace_params or {}
 
-    if not is_input_vrpss and vrpss_cellparams:
+    if not input_type is "vrpss" and vrpss_cellparams:
         raise AttributeError("Undefined configuration. You are passing in "
                              "parameters for a Variable Rate Poisson Spike "
                              "Source, but you are not setting "
-                             "is_input_vrpss=True")
+                             "input_type='vrpss'")
     # Objects and parameters
     projections = []
     populations = []
@@ -169,7 +170,7 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
         p_id = pop_info['id']
         pop_cellclass = pydoc.locate(pop_info['cellclass'])
         print("Reconstructing pop", pop_info['label'], "containing",  pop_info['n_neurons'], "neurons")
-        if is_input_vrpss and (
+        if input_type is "vrpss" and (
                 pop_cellclass is SpikeSourcePoissonVariable or
                 pop_cellclass is SpikeSourceArray or
                 pop_cellclass is SpikeSourcePoisson):
@@ -180,6 +181,17 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
 
             pop_cellclass = SpikeSourcePoissonVariable
             pop_cellparams = vrpss_cellparams
+        elif input_type is "ssa" and (
+            pop_cellclass is SpikeSourcePoissonVariable or
+            pop_cellclass is SpikeSourceArray or
+            pop_cellclass is SpikeSourcePoisson):
+            
+            print("--Going to use a SpikeSourceArray for this reconstruction ...")
+            print("--SpikeSourceArray is set to have", pop_info['n_neurons'], "neurons")
+            print("--and is labeled as ", pop_info['label'])
+            pop_cellclass = SpikeSourceArray
+            pop_cellparams = ssa_cellparams
+            
         elif pop_cellclass is SpikeSourcePoissonVariable:
             pop_cellparams = connectivity_data[pop_info['cellparams']].ravel()[0]
         else:
@@ -295,3 +307,4 @@ def set_i_offsets(populations, new_runtime, old_runtime=1000):
             population.set(i_offset=get_rescaled_biases(i_offset, new_runtime))
         except Exception:
             pass
+    
