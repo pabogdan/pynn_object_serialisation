@@ -8,7 +8,7 @@ class OutputDataProcessor():
 
     
     def __init__(self, path):
-        self.data = np.load(path)
+        self.data = np.load(path, allow_pickle=True)
         self.spikes_dict = self.reconstruct_spikes_dict()
         self.layer_names = list(self.spikes_dict.keys())
         self.order_layer_names()
@@ -19,29 +19,25 @@ class OutputDataProcessor():
         self.runtime = int(self.data['runtime'])
         self.N_layer = int(self.data['N_layer'])
         self.dt = 1
-        self.neo_object = self.data['neo_spikes_dict']
+        #self.neo_object = self.data['neo_spikes_dict']
         self.delay = self.get_delay()
         self.input_layer_name = self.layer_names[0]
         self.output_layer_name = self.layer_names[-1]
-        self.input_layer_shape = (32, 32, 3)
+        self.input_layer_shape = (3238,1)
         self.input_spikes = self.spikes_dict[self.input_layer_name]
         self.output_spikes = self.spikes_dict[self.output_layer_name]
         self.last_but_one_layer = self.layer_names[-2]
         self.number_of_examples = self.runtime // self.t_stim
         self.y_pred = self.get_batch_predictions() 
-        labels = np.load(
-            '/mnt/snntoolbox/snn_toolbox_private/examples/models/05-mobilenet_dwarf_v1/label_names.npz')
-        self.label_names = labels['arr_0']
-        labels.close()
-
-        x_test_file = np.load(
-            '/mnt/snntoolbox/snn_toolbox_private/examples/models/05-mobilenet_dwarf_v1/x_test.npz')
-        self.x_test = x_test_file['arr_0']
-        x_test_file.close()
+        self.layer_shapes = self.get_layer_shapes()
 
     def order_layer_names(self):
         self.layer_names.sort()
-        self.layer_names[0] = self.layer_names.pop(-1)
+        self.layer_names.insert(0,self.layer_names.pop(-1))
+        
+    def get_layer_shapes(self):
+        from snntoolbox.simulation.utils import get_shape_from_label
+        return [get_shape_from_label(label) if label != "InputLayer" else self.input_layer_shape for label in self.layer_names]
         
     def get_shape_from_name(name):
         shape_string = name.split('_')
@@ -61,7 +57,8 @@ class OutputDataProcessor():
             'runtime',
             't_stim',
             'neo_spikes_dict',
-            'sim_time']
+            'sim_time',
+            'dt']
         unexpected_files = [
             file for file in self.data.files if file not in expected_files]
         return {file_name: self.data[file_name] for file_name in unexpected_files}
@@ -87,7 +84,16 @@ class OutputDataProcessor():
             spikes[:, 1] < higher_end_bin_time))]
         output = np.asarray(output).astype(int)
         return output
-
+    
+    def get_spikes_event_format(self, bin_number, layer_index):
+        shape = self.layer_shapes[layer_index]
+        layer_name = self.layer_names[layer_index]
+        bin_spikes = self.get_bin_spikes(bin_number, layer_name)
+        spikes = [list() for _ in range(shape[0])]
+        for spike in bin_spikes:
+            spikes[spike[0]].append(spike[1])
+        return spikes
+        
     def get_counts(self, bin_number, layer_name, minlength= 3*32**2):
         '''Returns the counts per neuron per bin in a given layer'''
         spikes = self.get_bin_spikes(bin_number, layer_name)
@@ -106,6 +112,12 @@ class OutputDataProcessor():
 
     def plot_bin(self, bin_number, layer_name, shape = (10,1)):
         self.plot_rates(self.get_rates(bin_number, layer_name, np.product(shape)), shape)
+        
+    def plot_spikes(self, bin_number, layer_index):
+        
+        spikes = self.get_spikes_event_format(bin_number, layer_index)
+        plt.eventplot(spikes, orientation='vertical')
+        plt.show()
 
     def get_prediction(self, bin_number, layer_name):
         output_size = 10
@@ -127,8 +139,9 @@ class OutputDataProcessor():
             raise Exception('bin_number greater than number_of_examples')
             bin_number = self.number_of_examples-1
         output_spikes = self.get_counts(bin_number, self.output_layer_name, 10)
-        label_names = [name.decode('utf-8') for name in self.label_names]
-        plt.bar(label_names, output_spikes)
+        if hasattr(self, 'label_names'):
+            label_names = [name.decode('utf-8') for name in self.label_names]
+            plt.bar(label_names, output_spikes)
         plt.xticks(rotation=90)
 
     def get_accuracy(self):
@@ -139,3 +152,15 @@ class OutputDataProcessor():
     def bin_summary(self, bin_number):
         self.plot_output(bin_number)
         self.plot_bin(bin_number, self.output_layer_name)
+        
+    def animate(self, bin_number, layer_name):
+        ''' Animates a bin '''
+        from snntoolbox.simulation.utils import get_shape_from_label
+        
+        bin_spikes = self.get_bin_spikes(bin, layer_name)
+        layer_shape = get_shape_from_label(layer_name)
+        
+        
+        
+        
+        

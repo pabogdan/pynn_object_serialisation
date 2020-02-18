@@ -1,6 +1,7 @@
 # import keras dataset to deal with our common use cases
 from keras.datasets import mnist, cifar10, cifar100
 import keras
+from pynn_object_serialisation.OutputDataProcessor import OutputDataProcessor
 # usual sPyNNaker imports
 
 try:
@@ -11,10 +12,28 @@ import matplotlib.pyplot as plt
 from pynn_object_serialisation.functions import \
     restore_simulator_from_file, set_i_offsets
 from spynnaker8.extra_models import SpikeSourcePoissonVariable
+from multiprocessing.pool import Pool
+import multiprocessing
+import itertools
 import numpy as np
 import os
+import sys
 
-def run(args):
+def run(args, start_index):
+    
+    current = multiprocessing.current_process()
+    print('Started {}'.format(current))
+    if not os.path.exists('errorlog'):
+        os.makedirs('errorlog')
+    
+    f_name = "errorlog/" + current.name +"_stdout.txt"
+    g_name = "errorlog/" + current.name + "_stderror.txt"
+    f = open(f_name, 'w')
+    g = open(g_name, 'w')
+    old_stdout = sys.stdout
+    old_stderr = sys.stderr
+    sys.stdout = f
+    sys.stderr = g
 
     # Checking directory structure exists
     if not os.path.isdir(args.result_dir) and not os.path.exists(args.result_dir):
@@ -27,18 +46,15 @@ def run(args):
     x_train = x_train.reshape(x_train.shape[0], np.prod(x_train.shape[1:]))
     x_test = x_test.reshape(x_test.shape[0], np.prod(x_test.shape[1:]))
 
-    if args.testing_examples:
-        testing_examples = args.testing_examples
-    else:
-        testing_examples = x_test.shape[0]
+    testing_examples = args.chunk_size
 
     runtime = testing_examples * t_stim
     number_of_slots = int(runtime / t_stim)
     range_of_slots = np.arange(number_of_slots)
     starts = np.ones((N_layer, number_of_slots)) * (range_of_slots * t_stim)
     durations = np.ones((N_layer, number_of_slots)) * t_stim
-    # rates = np.random.randint(1, 5, size=(N_layer, number_of_slots))
-    rates = x_test[:testing_examples, :].T
+
+    rates = x_test[start_index:start_index+args.chunk_size, :].T
 
     # scaling rates
     _0_to_1_rates = rates / float(np.max(rates))
@@ -51,11 +67,10 @@ def run(args):
     }
 
     replace = None
-    # produce parameter replacement dict
     output_v = []
     populations, projections, custom_params = restore_simulator_from_file(
     sim, args.model,
-    is_input_vrpss=True,
+    input_type='vrpss',
     vrpss_cellparams=input_params,
     replace_params=replace)
     dt = sim.get_time_step()
@@ -66,50 +81,11 @@ def run(args):
     sim.set_number_of_neurons_per_core(sim.IF_curr_exp, 64)
     old_runtime = custom_params['runtime']
     set_i_offsets(populations, runtime, old_runtime=old_runtime)
-    # if args.test_with_pss:
-    #     pss_params = {
-    #         'rate'
-    #     }
-    #     populations.append(sim.Population(sim.SpikeSourcePoisson, ))
-    # set up recordings for other layers if necessary
+
     spikes_dict = {}
     neo_spikes_dict = {}
     
-    def record_output(populations,offset,output):
-        import pdb; pdb.set_trace()
-        spikes = populations[-1].spinnaker_get_data('spikes')
-        spikes = spikes + [0,offset]
-        name = populations[-1].label
-        if np.shape(spikes)[0]>0:
-            if name in list(output.keys()):
-                output[name] = np.concatenate((output,spikes))
-            else:
-                output[name] = spikes 
-        return output
 
-    #number of ms to simulate in a chunk
-    chunk_time = t_stim 
-    number_chunks = runtime // chunk_time
-    remainder_chunk_time = runtime % chunk_time
-    '''
-    for i in range(number_chunks):
-        for pop in populations[:]:
-            pop.record("spikes")
-        if args.record_v:
-            populations[-1].record("v")
-        sim.run(chunk_time)
-        spikes_dict = record_output(populations, i*chunk_time, spikes_dict)
-        sim.reset()
-    if remainder_chunk_time != 0:
-        #After a sim reset the vrpss needs to have its inputs readded 
-        for pop in populations[:]:
-            pop.record("spikes")
-        if args.record_v:
-            populations[-1].record("v")
-
-        sim.run(remainder_chunk_time)
-        spikes_dict = record_output(populations, i*chunk_time, spikes_dict)
-    '''
     for pop in populations[:]:
         pop.record("spikes")
     if args.record_v:
@@ -117,12 +93,8 @@ def run(args):
     sim.run(runtime)
     for pop in populations[:]:
         spikes_dict[pop.label] = pop.spinnaker_get_data('spikes')
-    # the following takes more time than spinnaker_get_data
-    # for pop in populations[:]:
-    #     neo_spikes_dict[pop.label] = pop.get_data('spikes')
     if args.record_v:
         output_v = populations[-1].spinnaker_get_data('v')
-    # save results
         
     if args.result_filename:
         results_filename = args.result_filename
@@ -136,7 +108,7 @@ def run(args):
         now = pylab.datetime.datetime.now()
         results_filename += "_" + now.strftime("_%H%M%S_%d%m%Y")
 
-    np.savez_compressed(os.path.join(args.result_dir, results_filename),
+    np.savez_compressed(os.path.join(args.result_dir, results_filename+"_" + str(start_index)),
             output_v=output_v,
             neo_spikes_dict=neo_spikes_dict,
             y_test=y_test,
@@ -151,4 +123,17 @@ def run(args):
 if __name__ == "__main__":
     import mnist_argparser
     args = mnist_argparser.main()
-    run(args)
+#     #Make a pool
+#     p = Pool(args.number_of_threads)
+#     #Run the pool
+#     p.starmap(run, zip(itertools.repeat(args), list(range(0, args.testing_examples, args.chunk_size))))
+#     print("Simulations complete. Gathering data...")
+    accuracies = []
+    for filename in os.listdir(args.result_dir):
+        data_processor = OutputDataProcessor(os.path.join(args.result_dir,filename))
+        data_processor.plot_input(0)
+        plt.show()
+#         accuracy = data_processor.get_accuracy())
+#         print("File: {} Accuracy: {}".format(str(filename), str(accuracy)))
+#         accuracies.append(accuracy)
+#     print("Accuracy = {}".format(str(sum(accuracies)/len(accuracies))))
