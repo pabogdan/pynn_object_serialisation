@@ -8,7 +8,7 @@ class OutputDataProcessor():
 
     
     def __init__(self, path):
-        self.data = np.load(path)
+        self.data = np.load(path, allow_pickle=True)
         self.spikes_dict = self.reconstruct_spikes_dict()
         self.layer_names = list(self.spikes_dict.keys())
         self.order_layer_names()
@@ -139,8 +139,9 @@ class OutputDataProcessor():
             raise Exception('bin_number greater than number_of_examples')
             bin_number = self.number_of_examples-1
         output_spikes = self.get_counts(bin_number, self.output_layer_name, 10)
-        label_names = [name.decode('utf-8') for name in self.label_names]
-        plt.bar(label_names, output_spikes)
+        if hasattr(self, 'label_names'):
+            label_names = [name.decode('utf-8') for name in self.label_names]
+            plt.bar(label_names, output_spikes)
         plt.xticks(rotation=90)
 
     def get_accuracy(self):

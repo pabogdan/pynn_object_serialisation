@@ -10,6 +10,7 @@ DEFAULT_RATE_SCALING = 1000  # Hz
 DEFAULT_T_STIM = 200  # ms
 DEFAULT_TESTING_EXAMPLES = 10000
 DEFAULT_CHUNK_SIZE = 100
+DEFAULT_NUMBER_OF_THREADS = 1
 
 parser = argparse.ArgumentParser(
     description='converted-MNIST argparser',
@@ -82,6 +83,10 @@ parser.add_argument('--testing_examples', type=int,
 parser.add_argument('--chunk_size', type=int,
                     help='the number of bins per chunk',
                     default=DEFAULT_CHUNK_SIZE)
+
+parser.add_argument('--number_of_threads', type=int,
+                    help ='the number of threads to run in parallel',
+                    default = DEFAULT_NUMBER_OF_THREADS)
 
 def main():
     return parser.parse_args()
