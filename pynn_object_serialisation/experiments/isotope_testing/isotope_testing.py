@@ -51,14 +51,24 @@ def run(args):
     labels = np.load("dataset/labels.npz", allow_pickle=True)['arr_0']
     
     # Produce parameter replacement dict
-    replace = {'tau_m':10}
+    replace = {'e_rev_E': 0.0,
+                'tau_m': 20.0,
+                'cm': 1.0,
+                'v_thresh': -50.0,
+                'v_rest': -65.0,
+                'i_offset': 0.0,
+                'tau_syn_I': 5.0,
+                'tau_syn_E': 5.0,
+                'tau_refrac': 0.1,
+                'v_reset': -65.0,
+                'e_rev_I': -70.0}
      
        
     t_stim = args.t_stim
     runtime = t_stim * args.testing_examples
     example = x_test[1] # Just doing the first one
     # Generate input params from data
-    input_params = convert_rate_array_to_VRPSS(example, runtime)
+    #input_params = convert_rate_array_to_VRPSS(example, runtime)
     
     from radioisotopedatatoolbox.DataGenerator import IsotopeRateFetcher, BackgroundRateFetcher, LinearMovementIsotope
     
@@ -68,15 +78,15 @@ def run(args):
     
     path = "/home/edwardjones/git/RadioisotopeDataToolbox/"
     
-    myisotope = IsotopeRateFetcher('Co-60', data_path=path, intensity=1)
-    background = BackgroundRateFetcher(intensity=1, data_path=path)
+    myisotope = IsotopeRateFetcher('Co-60', data_path=path, intensity=0.1)
+    background = BackgroundRateFetcher(intensity=0.1, data_path=path)
 
     moving_isotope = LinearMovementIsotope(
         myisotope, background=background, path_limits=[-2, 2],
         duration=t_stim, min_distance=0.1)
     
-    input_params = moving_isotope.output
-    del input_params['distances']
+    #input_params = moving_isotope.output
+    #del input_params['distances']
 
     input_params = {'spike_times':moving_isotope.spike_source_array}
     
