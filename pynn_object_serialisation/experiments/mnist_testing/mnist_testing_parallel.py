@@ -55,7 +55,7 @@ def run(args, start_index):
     durations = np.ones((N_layer, number_of_slots)) * t_stim
 
     rates = x_test[start_index:start_index+args.chunk_size, :].T
-
+    y_test = y_test[start_index:start_index+args.chunk_size]
     # scaling rates
     _0_to_1_rates = rates / float(np.max(rates))
     rates = _0_to_1_rates * args.rate_scaling
@@ -79,6 +79,7 @@ def run(args, start_index):
     sim.set_number_of_neurons_per_core(SpikeSourcePoissonVariable, 16)
     sim.set_number_of_neurons_per_core(sim.SpikeSourcePoisson, 16)
     sim.set_number_of_neurons_per_core(sim.IF_curr_exp, 64)
+    sim.set_number_of_neurons_per_core(sim.IF_cond_exp, 64)
     old_runtime = custom_params['runtime']
     set_i_offsets(populations, runtime, old_runtime=old_runtime)
 
@@ -123,17 +124,18 @@ def run(args, start_index):
 if __name__ == "__main__":
     import mnist_argparser
     args = mnist_argparser.main()
-#     #Make a pool
-#     p = Pool(args.number_of_threads)
-#     #Run the pool
-#     p.starmap(run, zip(itertools.repeat(args), list(range(0, args.testing_examples, args.chunk_size))))
-#     print("Simulations complete. Gathering data...")
+    #Make a pool
+    p = Pool(args.number_of_threads)
+    #Run the pool
+    p.starmap(run, zip(itertools.repeat(args), list(range(0, args.testing_examples, args.chunk_size))))
+    print("Simulations complete. Gathering data...")
+
     accuracies = []
     for filename in os.listdir(args.result_dir):
         data_processor = OutputDataProcessor(os.path.join(args.result_dir,filename))
-        data_processor.plot_input(0)
+        data_processor.plot_bin(0, -1)
         plt.show()
-#         accuracy = data_processor.get_accuracy())
-#         print("File: {} Accuracy: {}".format(str(filename), str(accuracy)))
-#         accuracies.append(accuracy)
-#     print("Accuracy = {}".format(str(sum(accuracies)/len(accuracies))))
+        accuracy = data_processor.get_accuracy()
+        print("File: {} Accuracy: {}".format(str(filename), str(accuracy)))
+        accuracies.append(accuracy)
+    print("Accuracy = {}".format(str(sum(accuracies)/len(accuracies))))
