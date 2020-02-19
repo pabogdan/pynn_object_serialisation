@@ -1,5 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib import animation
+from numpy import int
 
 class OutputDataProcessor():
     ''' A class to represent the output of a serialised model and to
@@ -30,6 +32,7 @@ class OutputDataProcessor():
         self.number_of_examples = self.runtime // self.t_stim
         self.y_pred = self.get_batch_predictions() 
         self.layer_shapes = self.get_layer_shapes()
+        self.custom_params = self.data['custom_params']
 
     def order_layer_names(self):
         self.layer_names.sort()
@@ -88,8 +91,7 @@ class OutputDataProcessor():
     
     def get_spikes_event_format(self, bin_number, layer_index):
         shape = self.layer_shapes[layer_index]
-        layer_name = self.layer_names[layer_index]
-        bin_spikes = self.get_bin_spikes(bin_number, layer_name)
+        bin_spikes = self.get_bin_spikes(bin_number, layer_index)
         spikes = [list() for _ in range(shape[0])]
         for spike in bin_spikes:
             spikes[spike[0]].append(spike[1])
@@ -114,11 +116,13 @@ class OutputDataProcessor():
     def plot_bin(self, bin_number, layer_index, shape = (10,1)):
         self.plot_rates(self.get_rates(bin_number, layer_index, np.product(shape)), shape)
         
-    def plot_spikes(self, bin_number, layer_index):
+    def plot_spikes(self, bin_number, layer_index, labels=None):
         
         spikes = self.get_spikes_event_format(bin_number, layer_index)
-        plt.eventplot(spikes, orientation='vertical')
-        plt.show()
+        plt.eventplot(spikes, orientation='horizontal')
+        if labels is not None:
+            plt.xticks(range(len(labels)), labels, rotation='vertical')
+
 
     def get_prediction(self, bin_number, layer_index):
         output_size = 10
@@ -154,13 +158,94 @@ class OutputDataProcessor():
         self.plot_output(bin_number)
         self.plot_bin(bin_number, -1)
         
-    def animate(self, bin_number, layer_index):
+    def get_spikes_in_timestep(self, spikes, timestep):
+        output_spikes = np.zeros((1, len(spikes))).astype(np.bool)
+        for i, neuron in enumerate(spikes):
+            if timestep in neuron:
+                output_spikes[0,i] = True
+        return output_spikes.astype(bool)
+        
+        
+        
+    def animate_bin(self, bin_number, layer_index):
         ''' Animates a bin '''
-        # TODO inplement this
+
         from snntoolbox.simulation.utils import get_shape_from_label
         
-        bin_spikes = self.get_bin_spikes(bin, layer_index)
-        layer_shape = get_shape_from_label(layer_index)
+        bin_spikes = self.get_spikes_event_format(bin_number, layer_index)
+        try:
+            layer_shape = get_shape_from_label(self.layer_names[layer_index])
+        except IndexError:
+            layer_shape = self.input_layer_shape
+
+        fig, (ax1, ax2, ax3) = plt.subplots(3,1)
+        
+        try:
+            distances = self.custom_params['distances']
+            labels = self.custom_params['isotope_labels']
+        except:
+            print(Exception)
+        
+            
+        if labels is not None:
+            labels = np.insert(labels,0, '')
+            print(labels)
+            ax3.set_xticklabels(labels, rotation='vertical')
+        
+        ax3.yaxis.set_visible(False)
+        ax3.set_xlabel("Isotope classification (spikes in final layer)")
+        ax1.plot(range(self.runtime), distances)
+        ax1.set_ylabel('Distance between source and detector/m')
+        ax1.set_xlabel('Time/ms')  
+        
+        ax2.eventplot(self.get_spikes_event_format(0, 0), orientation='horizontal')
+        ax2.set_ylim(0, 4000)
+        ax2.yaxis.set_ticks(np.arange(0, 4000, 500))
+        ax2.set_ylabel("Gamma photon frequency/keV")
+        ax2.set_xlabel('Time/ms')  
+        
+        redline_1 = ax1.axvline(x=0, c='red', alpha=0.5)
+        redline_2 = ax2.axvline(x=0, c='red', alpha=0.5)
+        
+        a = np.zeros((1, len(bin_spikes)))
+        im = ax3.imshow(a,interpolation='none', vmin=0, vmax=1)
+        title = ax1.text(0,1,"")
+        
+        def init():
+            a = np.zeros((1,len(bin_spikes)))
+            im.set_array(a)
+            redline_1.set_xdata(0)
+            redline_2.set_xdata(0)
+            title.set_text("Timestep: 0")
+            return [im, redline_1, redline_2, title]
+        
+        # animation function.  This is called sequentially
+        def animate(i):
+            title.set_text("Timestep: {}".format(i))
+            a = im.get_array()
+            a=a*np.exp(-0.01*i)    # exponential decay of the values
+            a += self.get_spikes_in_timestep(bin_spikes, i)
+            im.set_array(a)
+            redline_1.set_xdata(i)
+            redline_2.set_xdata(i)
+            print(i)
+            return [im, redline_1, redline_2,title]
+
+        anim = animation.FuncAnimation(fig, animate, init_func=init,
+                                       frames=500, interval=1, blit=True)
+        
+        # save the animation as an mp4.  This requires ffmpeg or mencoder to be
+        # installed.  The extra_args ensure that the x264 codec is used, so that
+        # the video can be embedded in html5.  You may need to adjust this for
+        # your system: for more information, see
+        # http://matplotlib.sourceforge.net/api/animation_api.html
+        #anim.save('basic_animation.mp4', fps=1000, extra_args=['-vcodec', 'libx264'])
+        
+        plt.show()
+        
+        
+        
+        
         
         
         

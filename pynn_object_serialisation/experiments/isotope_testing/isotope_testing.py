@@ -11,9 +11,11 @@ import matplotlib.pyplot as plt
 from pynn_object_serialisation.functions import \
     restore_simulator_from_file, set_i_offsets
 from spynnaker8.extra_models import SpikeSourcePoissonVariable
-from radioisotopedatatoolbox.DataGenerator import RandomIsotopeFlyBys
+from radioisotopedatatoolbox.DataGenerator import GammaRateFetcher
 import numpy as np
 import os
+
+path = "/home/edwardjones/git/RadioisotopeDataToolbox/"
 
 def convert_rate_array_to_VRPSS(input_rates: np.array, duration=1000):
     number_of_examples = input_rates.shape[0]
@@ -74,9 +76,8 @@ def run(args):
     
     from pathlib import Path
     from os import getcwd
-    path = str(Path(getcwd()).parent) + '/'
     
-    path = "/home/edwardjones/git/RadioisotopeDataToolbox/"
+
     
     myisotope = IsotopeRateFetcher('Co-60', data_path=path, intensity=0.1)
     background = BackgroundRateFetcher(intensity=0.1, data_path=path)
@@ -153,6 +154,8 @@ def run(args):
                         runtime=runtime,
                         sim_time=runtime,
                         dt=dt,
+                        custom_params = {'distances':moving_isotope.distances,
+                                         'isotope_labels':GammaRateFetcher.get_possible_sources(data_path=path)}
                         **spikes_dict)
     sim.end()
 
@@ -164,6 +167,9 @@ if __name__ == "__main__":
 
     from pynn_object_serialisation.OutputDataProcessor import OutputDataProcessor
     
-    proc = OutputDataProcessor("results/flyby_test.npz")
-    proc.plot_spikes(0, -1)
-    
+    proc = OutputDataProcessor("results/new_flyby_test.npz")
+#     proc.plot_spikes(0, -1, list(labels))
+#     plt.show()
+    proc.animate_bin(0, -1, labels)
+    #proc.plot_spikes(0,0)
+    plt.show()
