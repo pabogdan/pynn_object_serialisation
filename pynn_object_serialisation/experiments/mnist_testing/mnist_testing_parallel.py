@@ -88,7 +88,7 @@ def run(args, start_index):
     
     def reset_membrane_voltage():        
         for population in populations[1:]:
-            population.set(v=0)
+            population.set_initial_value(variable="v", value=0)
         return
 
     for pop in populations[:]:
