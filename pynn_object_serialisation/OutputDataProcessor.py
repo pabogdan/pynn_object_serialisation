@@ -76,7 +76,8 @@ class OutputDataProcessor():
             print('Final bin cut off.')
         return lower_end_bin_time, higher_end_bin_time
 
-    def get_bin_spikes(self, bin_number, layer_name):
+    def get_bin_spikes(self, bin_number, layer_index):
+        layer_name = self.layer_names[layer_index]
         '''Returns the spike train data for a given layer and bin'''
         lower_end_bin_time, higher_end_bin_time = self.get_bounds(bin_number)
         spikes = self.spikes_dict[layer_name]
@@ -94,15 +95,15 @@ class OutputDataProcessor():
             spikes[spike[0]].append(spike[1])
         return spikes
         
-    def get_counts(self, bin_number, layer_name, minlength= 3*32**2):
+    def get_counts(self, bin_number, layer_index, minlength= 3*32**2):
         '''Returns the counts per neuron per bin in a given layer'''
-        spikes = self.get_bin_spikes(bin_number, layer_name)
+        spikes = self.get_bin_spikes(bin_number, layer_index)
         just_spikes = spikes.reshape((-1, 2))[:, 0]
         counts = np.bincount(just_spikes, minlength=minlength)
         return counts
 
-    def get_rates(self, bin_number, layer_name, shape):
-        return self.get_counts(bin_number, layer_name, shape) / self.t_stim
+    def get_rates(self, bin_number, layer_index, shape):
+        return self.get_counts(bin_number, layer_index, shape) / self.t_stim
 
     def plot_rates(self, rates, shape = (32, 32, 3)):
         rates /= rates.max()
@@ -110,8 +111,8 @@ class OutputDataProcessor():
         plt.colorbar()
         plt.show()
 
-    def plot_bin(self, bin_number, layer_name, shape = (10,1)):
-        self.plot_rates(self.get_rates(bin_number, layer_name, np.product(shape)), shape)
+    def plot_bin(self, bin_number, layer_index, shape = (10,1)):
+        self.plot_rates(self.get_rates(bin_number, layer_index, np.product(shape)), shape)
         
     def plot_spikes(self, bin_number, layer_index):
         
@@ -119,9 +120,9 @@ class OutputDataProcessor():
         plt.eventplot(spikes, orientation='vertical')
         plt.show()
 
-    def get_prediction(self, bin_number, layer_name):
+    def get_prediction(self, bin_number, layer_index):
         output_size = 10
-        counts = self.get_counts(bin_number, layer_name, output_size)
+        counts = self.get_counts(bin_number, layer_index, output_size)
         if counts.max() > 0:
             return int(np.argmax(counts))
         else:
@@ -131,14 +132,14 @@ class OutputDataProcessor():
         y_pred = np.ones(self.number_of_examples) * (-1)
         for bin_number in range(self.number_of_examples):
             y_pred[bin_number] = self.get_prediction(
-                bin_number, self.output_layer_name)
+                bin_number, -1)
         return y_pred
 
     def plot_output(self, bin_number):
         if bin_number > self.number_of_examples: 
             raise Exception('bin_number greater than number_of_examples')
             bin_number = self.number_of_examples-1
-        output_spikes = self.get_counts(bin_number, self.output_layer_name, 10)
+        output_spikes = self.get_counts(bin_number, -1, 10)
         if hasattr(self, 'label_names'):
             label_names = [name.decode('utf-8') for name in self.label_names]
             plt.bar(label_names, output_spikes)
@@ -151,14 +152,15 @@ class OutputDataProcessor():
 
     def bin_summary(self, bin_number):
         self.plot_output(bin_number)
-        self.plot_bin(bin_number, self.output_layer_name)
+        self.plot_bin(bin_number, -1)
         
-    def animate(self, bin_number, layer_name):
+    def animate(self, bin_number, layer_index):
         ''' Animates a bin '''
+        # TODO inplement this
         from snntoolbox.simulation.utils import get_shape_from_label
         
-        bin_spikes = self.get_bin_spikes(bin, layer_name)
-        layer_shape = get_shape_from_label(layer_name)
+        bin_spikes = self.get_bin_spikes(bin, layer_index)
+        layer_shape = get_shape_from_label(layer_index)
         
         
         
