@@ -86,12 +86,18 @@ def run(args, start_index):
     spikes_dict = {}
     neo_spikes_dict = {}
     
+    def reset_membrane_voltage():        
+        for population in populations[1:]:
+            population.set(v=0)
+        return
 
     for pop in populations[:]:
         pop.record("spikes")
     if args.record_v:
         populations[-1].record("v")
-    sim.run(runtime)
+    for i in range(args.chunk_size):
+        sim.run(t_stim)
+        reset_membrane_voltage()
     for pop in populations[:]:
         spikes_dict[pop.label] = pop.spinnaker_get_data('spikes')
     if args.record_v:
