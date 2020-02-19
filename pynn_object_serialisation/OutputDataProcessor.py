@@ -1,7 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from builtins import Exception
-from Onboard.KeyboardPopups import LayoutPopup
 
 class OutputDataProcessor():
     ''' A class to represent the output of a serialised model and to
