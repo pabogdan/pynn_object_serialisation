@@ -32,7 +32,11 @@ class OutputDataProcessor():
         self.number_of_examples = self.runtime // self.t_stim
         self.y_pred = self.get_batch_predictions() 
         self.layer_shapes = self.get_layer_shapes()
-        self.custom_params = self.data['custom_params']
+        try:
+            self.custom_params = self.data['custom_params']
+        except:
+            pass
+
 
     def order_layer_names(self):
         self.layer_names.sort()
@@ -169,7 +173,8 @@ class OutputDataProcessor():
         
     def animate_bin(self, bin_number, layer_index):
         ''' Animates a bin '''
-
+        path = "/home/edwardjones/git/RadioisotopeDataToolbox/"
+        
         from snntoolbox.simulation.utils import get_shape_from_label
         
         bin_spikes = self.get_spikes_event_format(bin_number, layer_index)
@@ -180,12 +185,23 @@ class OutputDataProcessor():
 
         fig, (ax1, ax2, ax3) = plt.subplots(3,1)
         
+        fig.set_figheight(15)
+        fig.set_figwidth(15)
+        
         try:
             distances = self.custom_params['distances']
             labels = self.custom_params['isotope_labels']
         except:
-            print(Exception)
+            labels = ['Am-241', 'Ba-133', 'Background', 'Co-60', 'Cs-137', 'Eu-152']
+            from radioisotopedatatoolbox.DataGenerator import IsotopeRateFetcher, BackgroundRateFetcher, LinearMovementIsotope
+            myisotope = IsotopeRateFetcher('Co-60', data_path=path)
+            background = BackgroundRateFetcher(intensity=1, data_path=path)
         
+        
+            moving_isotope = LinearMovementIsotope(
+            myisotope, background=background, path_limits=[-2, 2],
+            duration=5000, min_distance=0.1)
+            distances = moving_isotope.distances
             
         if labels is not None:
             labels = np.insert(labels,0, '')
@@ -222,9 +238,9 @@ class OutputDataProcessor():
         # animation function.  This is called sequentially
         def animate(i):
             title.set_text("Timestep: {}".format(i))
-            a = im.get_array()
-            a=a*np.exp(-0.01*i)    # exponential decay of the values
-            a += self.get_spikes_in_timestep(bin_spikes, i)
+            #a = im.get_array()
+            #a=a*np.exp(-0.01*i)    # exponential decay of the values
+            a = self.get_spikes_in_timestep(bin_spikes, i)
             im.set_array(a)
             redline_1.set_xdata(i)
             redline_2.set_xdata(i)
@@ -232,14 +248,14 @@ class OutputDataProcessor():
             return [im, redline_1, redline_2,title]
 
         anim = animation.FuncAnimation(fig, animate, init_func=init,
-                                       frames=500, interval=1, blit=True)
+                                       frames=5000, interval=1, blit=True)
         
         # save the animation as an mp4.  This requires ffmpeg or mencoder to be
         # installed.  The extra_args ensure that the x264 codec is used, so that
         # the video can be embedded in html5.  You may need to adjust this for
         # your system: for more information, see
         # http://matplotlib.sourceforge.net/api/animation_api.html
-        #anim.save('basic_animation.mp4', fps=1000, extra_args=['-vcodec', 'libx264'])
+        #anim.save('flyby_test.mp4', fps=50, extra_args=['-vcodec', 'libx264'])
         
         plt.show()
         

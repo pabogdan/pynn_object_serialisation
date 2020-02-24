@@ -15,6 +15,7 @@ from radioisotopedatatoolbox.DataGenerator import GammaRateFetcher
 import numpy as np
 import os
 
+global path 
 path = "/home/edwardjones/git/RadioisotopeDataToolbox/"
 
 def convert_rate_array_to_VRPSS(input_rates: np.array, duration=1000):
@@ -51,7 +52,7 @@ def run(args):
 
     
     labels = np.load("dataset/labels.npz", allow_pickle=True)['arr_0']
-    
+    print(labels)
     # Produce parameter replacement dict
     replace = {'e_rev_E': 0.0,
                 'tau_m': 20.0,
@@ -74,9 +75,7 @@ def run(args):
     
     from radioisotopedatatoolbox.DataGenerator import IsotopeRateFetcher, BackgroundRateFetcher, LinearMovementIsotope
     
-    from pathlib import Path
-    from os import getcwd
-    
+   
 
     
     myisotope = IsotopeRateFetcher('Co-60', data_path=path, intensity=0.1)
@@ -161,15 +160,15 @@ def run(args):
 
 
 if __name__ == "__main__":
-    import isotope_argparser
-    args = isotope_argparser.main()
-    run(args)
+#     import isotope_argparser
+#     args = isotope_argparser.main()
+#     run(args)
 
     from pynn_object_serialisation.OutputDataProcessor import OutputDataProcessor
     
-    proc = OutputDataProcessor("results/new_flyby_test.npz")
+    proc = OutputDataProcessor("results/flyby_test.npz")
 #     proc.plot_spikes(0, -1, list(labels))
 #     plt.show()
-    proc.animate_bin(0, -1, labels)
-    #proc.plot_spikes(0,0)
+    proc.animate_bin(0, -1)
+    proc.plot_spikes(0,0)
     plt.show()
