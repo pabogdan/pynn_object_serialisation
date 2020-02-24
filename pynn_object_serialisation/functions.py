@@ -308,3 +308,45 @@ def set_i_offsets(populations, new_runtime, old_runtime=1000):
         except Exception:
             pass
     
+def serialisation_summary(filename):
+    """ Gives a human-readable output for a serialised model
+    """
+    # Load the data from disk
+    with open(filename + ".json", "r") as read_file:
+        json_data = json.load(read_file)
+    
+    print("="*10 +"Summary" +"="*10)
+    
+    no_pops = len(json_data['populations'].keys())
+    no_proj = len(json_data['projections'].keys())
+    
+    print("Number of populations: {}".format(no_pops))
+    print("Number of projections: {}".format(no_proj))
+    
+    neuron_total = 0
+    
+    for population in json_data['populations']:
+        neuron_total += json_data['populations'][population]['n_neurons']
+    
+    
+    print("Total number of neurons: {}".format(neuron_total))
+    print("\n\n")
+    for population in json_data['populations']:
+        print("="*10 +"Layer" +"="*10)
+        print("Layer label:{}".format(json_data['populations'][population]['label']))
+        print("Number of neurons:{}".format(json_data['populations'][population]['n_neurons']))
+        print("Neuron model:{}".format(json_data['populations'][population]['cellclass']))
+        print("="*10 +"Projections" +"="*10)
+        for projection in json_data['projections']:
+            if json_data['projections'][projection]['pre_id'] == json_data['populations'][population]['id']:
+                #Check this is the right way round
+                type = "inhibitory" if bool(json_data['projections'][projection]['receptor_type']) else "excitatory"
+                print("Projection {}, ({})".format(projection, type))
+                print("Projections from {} to {}".format(json_data['projections'][projection]['pre_label'], json_data['projections'][projection]['post_label']))
+        print ('\n')
+    
+if __name__ == '__main__':
+    serialisation_summary("experiments/mnist_testing/lenet_dense_IF_cond_exp_serialised")
+    
+    
+    
