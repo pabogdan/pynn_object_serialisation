@@ -166,13 +166,7 @@ class OutputDataProcessor():
     def bin_summary(self, bin_number):
         self.plot_output(bin_number)
         self.plot_bin(bin_number, self.output_layer_name)
-        
-    def animate(self, bin_number, layer_name):
-        ''' Animates a bin '''
-        from snntoolbox.simulation.utils import get_shape_from_label
-        
-        bin_spikes = self.get_bin_spikes(bin, layer_name)
-        layer_shape = get_shape_from_label(layer_name)
+
         
         
         
