@@ -126,7 +126,7 @@ def intercept_simulator(sim, output_filename=None, cellparams=None,
 def restore_simulator_from_file(sim, filename, prune_level=1.,
                                 is_input_vrpss=False,
                                 vrpss_cellparams=None,
-                                replace_params=None):
+                                replace_params=None, n_boards_required=None):
     replace_params = replace_params or {}
 
     if not is_input_vrpss and vrpss_cellparams:
@@ -148,15 +148,11 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
     no_proj = len(json_data['projections'].keys())
     # setup
     setup_params = json_data['setup']
+    # TODO move setup outside into whatever experiment is run
     sim.setup(setup_params['machine_time_step'] / 1000.,
               setup_params['min_delay'],
-              setup_params['max_delay'])
-    # could set global constraints TODO
-    # TODO resolve the hack below
-    # sim.set_number_of_neurons_per_core(SpikeSourcePoissonVariable, 16)
-    # sim.set_number_of_neurons_per_core(SpikeSourcePoissonVariable, 16)
-    # sim.set_number_of_neurons_per_core(sim.SpikeSourcePoisson, 16)
-    # sim.set_number_of_neurons_per_core(sim.IF_curr_exp, 128)
+              setup_params['max_delay'],
+              n_boards_required=n_boards_required)
 
     try:
         custom_params = json_data['custom_params']
