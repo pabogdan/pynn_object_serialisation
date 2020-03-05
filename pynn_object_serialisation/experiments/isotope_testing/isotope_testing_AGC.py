@@ -108,14 +108,26 @@ def run(args):
     AGC_input_weight = one_spike_weight/multiplier
     AGC_output_weight = one_spike_weight
     print("Adding AGC inhibitory neuron")
-    AGC_pop  = sim.Population(1, cell_type)
-    to_AGC_pop = sim.Projection(populations[0], AGC_pop, sim.AllToAllConnector(), sim.StaticSynapse(weight=AGC_input_weight))
-    from_AGC_pop = sim.Projection(AGC_pop, populations[1], sim.AllToAllConnector(), sim.StaticSynapse(weight=AGC_output_weight))
-        
+    AGC_pop  = sim.Population(100, cell_type)
+    
+    #These bits probably aren't doing what they should do and require more thought
+    
+    # Do an average pooling conv layer 3238 -> 100
+    to_AGC_pop1 = sim.Projection(populations[0], AGC_pop1, sim.KernelConnector(shape_pre=(populations[0].size, 1),
+                                                           shape_post=(AGC_pop1.size, 1),
+                                                           shape_kernel=(30, 1),
+                                                           weight_kernel=1/one_spike_weight/30 *np.ones((30,1))),
+                                                           receptor_type='excitatory')
+
+    # Then a another 100 -> 1 
+    from_AGC_pop1 = sim.Projection(AGC_pop2, populations[1], sim.AllToAllConnector(),\
+                                    sim.StaticSynapse(weight=AGC_output_weight),\
+                                    receptor_type ='inhibitory')
+    
+
     #Sets the integration time of the AGC neuron
     AGC_integration_time = multiplier * standard_tau_m
-    AGC_pop.set(tau_m=AGC_integration_time)
-    
+    AGC_pop1.set(tau_m=AGC_integration_time)
     
     dt = sim.get_time_step()
     N_layer = len(populations)
@@ -124,6 +136,7 @@ def run(args):
     sim.set_number_of_neurons_per_core(SpikeSourcePoissonVariable, 16)
     sim.set_number_of_neurons_per_core(sim.SpikeSourcePoisson, 16)
     sim.set_number_of_neurons_per_core(sim.IF_curr_exp, 64)
+    sim.set_number_of_neurons_per_core(sim.IF_cond_exp, 64)
     old_runtime = custom_params['runtime']
     set_i_offsets(populations, runtime, old_runtime=old_runtime)
     spikes_dict = {}
@@ -189,6 +202,6 @@ if __name__ == "__main__":
     proc = OutputDataProcessor("results/AGC_flyby_test.npz")
 #     proc.plot_spikes(0, -1, list(labels))
 #     plt.show()
-#    proc.animate_bin(0, -1)
+    proc.animate_bin(0, -1)
 #    proc.plot_spikes(0,0)
-#    plt.show()
+    plt.show()
