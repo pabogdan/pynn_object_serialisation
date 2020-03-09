@@ -5,6 +5,8 @@ import numpy as np
 import pynn_object_serialisation.serialisation_utils as utils
 from spynnaker8.extra_models import SpikeSourcePoissonVariable
 from spynnaker8 import SpikeSourceArray, SpikeSourcePoisson
+from pprint import pprint as pp
+from colorama import Fore, Style, init as color_init
 
 DEFAULT_RECEPTOR_TYPES = ["excitatory", "inhibitory"]
 
@@ -163,12 +165,14 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
     total_no_neurons = 0
     total_no_synapses = 0
     max_synapses_per_neuron = 0
+    no_afferents = {}
     print("Population reconstruction begins...")
     for pop_no in range(no_pops):
         pop_info = json_data['populations'][str(pop_no)]
         p_id = pop_info['id']
         pop_cellclass = pydoc.locate(pop_info['cellclass'])
-        print("Reconstructing pop", pop_info['label'], "containing", pop_info['n_neurons'], "neurons")
+        print("Reconstructing pop {:35}".format(pop_info['label']), "containing",
+              format(pop_info['n_neurons'], ","), "neurons")
         if is_input_vrpss and (
                 pop_cellclass is SpikeSourcePoissonVariable or
                 pop_cellclass is SpikeSourceArray or
@@ -190,6 +194,7 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
             if k in pop_cellparams.keys():
                 pop_cellparams[k] = replace_params[k]
 
+        no_afferents[pop_info['label']] = 0
         total_no_neurons += pop_info['n_neurons']
         populations.append(
             sim.Population(
@@ -217,11 +222,22 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
         synapse_dynamics = utils._build_synapse_info(sim, proj_info)
         total_no_synapses += _conn.shape[0]
 
-        post_n_neurons = json_data['populations'][str(proj_info['post_number'])]['n_neurons']
-        max_synapses_per_neuron = max(max_synapses_per_neuron, _conn.shape[0]/post_n_neurons)
+        post_n_neurons = \
+            json_data['populations'][str(proj_info['post_number'])]['n_neurons']
+
+        number_of_synapses = _conn.shape[0]
+        max_synapses_per_neuron = max(max_synapses_per_neuron,
+                                      number_of_synapses/post_n_neurons)
         # create the projection
         conn_label = proj_info['pre_label'] + "_to_" + proj_info['post_label']
         print("Reconstructing proj", conn_label)
+        receptor_type = DEFAULT_RECEPTOR_TYPES[proj_info['receptor_type']]
+        _c = Fore.GREEN if receptor_type =="excitatory" else Fore.RED
+        print("\t{:20}".format(format(number_of_synapses, ",")),
+              _c, DEFAULT_RECEPTOR_TYPES[proj_info['receptor_type']],
+              Style.RESET_ALL,
+              "synapses")
+        no_afferents[proj_info['post_label']] += number_of_synapses
         projections.append(
             sim.Projection(
                 populations[proj_info['pre_number']],  # pre population
@@ -244,17 +260,19 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
     write_report("Total number of neurons", total_no_neurons)
     write_report("Total number of synapses", total_no_synapses)
     if total_no_synapses > 0:
-        write_report("Avg fan in", total_no_neurons / total_no_synapses)
+        write_report("Avg fan in", total_no_synapses / total_no_neurons)
         write_report("Max fan in", max_synapses_per_neuron)
     else:
         write_report("Avg fan in", "NaN")
         write_report("Max fan in", "NaN")
+    print("Number of afferents (exc + inh)")
+    pp(no_afferents)
     print("=" * 80)
     return populations, projections, custom_params
 
 
 def write_report(msg, value):
-    print("{:<50}:{:>10}".format(msg, value))
+    print("{:<50}:{:>14}".format(msg, format(int(value), ",")))
 
 
 def get_input_size(sim):
