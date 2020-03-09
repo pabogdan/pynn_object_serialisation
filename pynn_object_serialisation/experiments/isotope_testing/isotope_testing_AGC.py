@@ -107,8 +107,8 @@ def run(args):
 
     AGC_input_weight = one_spike_weight/multiplier
     AGC_output_weight = one_spike_weight
-    print("Adding AGC inhibitory neuron")
-    AGC_pop  = sim.Population(100, cell_type)
+    print("Adding AGC inhibitory neurons")
+    AGC_pop1  = sim.Population(100, cell_type)
     
     #These bits probably aren't doing what they should do and require more thought
     
@@ -119,9 +119,8 @@ def run(args):
                                                            weight_kernel=1/one_spike_weight/30 *np.ones((30,1))),
                                                            receptor_type='excitatory')
 
-    # Then a another 100 -> 1 
-    from_AGC_pop1 = sim.Projection(AGC_pop2, populations[1], sim.AllToAllConnector(),\
-                                    sim.StaticSynapse(weight=AGC_output_weight),\
+    from_AGC_pop1 = sim.Projection(AGC_pop1, populations[1], sim.AllToAllConnector(),\
+                                    sim.StaticSynapse(weight=AGC_output_weight/AGC_pop1.size),\
                                     receptor_type ='inhibitory')
     
 
@@ -135,8 +134,8 @@ def run(args):
     max_delay = sim.get_max_delay()
     sim.set_number_of_neurons_per_core(SpikeSourcePoissonVariable, 16)
     sim.set_number_of_neurons_per_core(sim.SpikeSourcePoisson, 16)
-    sim.set_number_of_neurons_per_core(sim.IF_curr_exp, 64)
-    sim.set_number_of_neurons_per_core(sim.IF_cond_exp, 64)
+    sim.set_number_of_neurons_per_core(sim.IF_curr_exp, 128)
+    sim.set_number_of_neurons_per_core(sim.IF_cond_exp, 128)
     old_runtime = custom_params['runtime']
     set_i_offsets(populations, runtime, old_runtime=old_runtime)
     spikes_dict = {}
