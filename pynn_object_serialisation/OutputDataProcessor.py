@@ -84,9 +84,14 @@ class OutputDataProcessor():
         return lower_end_bin_time, higher_end_bin_time
 
     def get_bin_spikes(self, bin_number, layer_index):
-        layer_name = self.layer_names[layer_index]
         '''Returns the spike train data for a given layer and bin'''
+        layer_name = self.layer_names[layer_index]
         lower_end_bin_time, higher_end_bin_time = self.get_bounds(bin_number)
+        return self.get_spikes(lower_end_bin_time, higher_end_bin_time, layer_index)
+    
+    def get_spikes(self, lower_end_bin_time, higher_end_bin_time, layer_index):
+        '''Returns the spike train data for a given layer and times'''
+        layer_name = self.layer_names[layer_index]
         spikes = self.spikes_dict[layer_name]
         output = spikes[np.where((spikes[:, 1] >= lower_end_bin_time) & (
             spikes[:, 1] < higher_end_bin_time))]
@@ -101,15 +106,25 @@ class OutputDataProcessor():
             spikes[spike[0]].append(spike[1])
         return spikes
         
-    def get_counts(self, bin_number, layer_index, minlength= 3*32**2):
-        '''Returns the counts per neuron per bin in a given layer'''
-        spikes = self.get_bin_spikes(bin_number, layer_index)
+    def get_counts(self, lower_end_bin_time, higher_end_bin_time, layer_index, minlength= 3*32**2):
+        '''Returns the counts per neuron between two points in time in a given layer'''
+        spikes = self.get_spikes(lower_end_bin_time, higher_end_bin_time, layer_index)
         just_spikes = spikes.reshape((-1, 2))[:, 0]
         counts = np.bincount(just_spikes, minlength=minlength)
         return counts
+    
+    #===========================================================================
+    # def get_counts(self, bin_number, layer_index, minlength= 3*32**2):
+    #     '''Returns the counts per neuron per bin in a given layer'''
+    #     
+    #     spikes = self.get_spikes(*self.get_bounds(bin_number), layer_index)
+    #     just_spikes = spikes.reshape((-1, 2))[:, 0]
+    #     counts = np.bincount(just_spikes, minlength=minlength)
+    #     return counts
+    #===========================================================================
 
     def get_rates(self, bin_number, layer_index, shape):
-        return self.get_counts(bin_number, layer_index, shape) / self.t_stim
+        return self.get_counts(*self.get_bounds(bin_number), layer_index, shape) / self.t_stim
 
     def plot_rates(self, rates, shape = (32, 32, 3)):
         rates /= rates.max()
@@ -130,7 +145,7 @@ class OutputDataProcessor():
 
     def get_prediction(self, bin_number, layer_index):
         output_size = 10
-        counts = self.get_counts(bin_number, layer_index, output_size)
+        counts = self.get_counts(*self.get_bounds(bin_number), layer_index, output_size)
         if counts.max() > 0:
             return int(np.argmax(counts))
         else:
@@ -143,14 +158,19 @@ class OutputDataProcessor():
                 bin_number, -1)
         return y_pred
 
-    def plot_output(self, bin_number):
+    def plot_output_bin(self, bin_number):
         if bin_number > self.number_of_examples: 
             raise Exception('bin_number greater than number_of_examples')
             bin_number = self.number_of_examples-1
-        output_spikes = self.get_counts(bin_number, -1, 10)
+        
+    
+    def plot_output_continuous(self, lower_end_bin_time, higher_end_bin_time):
+        
+        output_spikes = self.get_counts(lower_end_bin_time, higher_end_bin_time, -1, 6)
         if hasattr(self, 'label_names'):
-            label_names = [name.decode('utf-8') for name in self.label_names]
-            plt.bar(label_names, output_spikes)
+            plt.bar(self.label_names, output_spikes)
+        else:
+            plt.bar(range(len(output_spikes)), output_spikes)
         plt.xticks(rotation=90)
 
     def get_accuracy(self):
@@ -169,11 +189,26 @@ class OutputDataProcessor():
                 output_spikes[0,i] = True
         return output_spikes.astype(bool)
         
+    def get_isotope_extras(self):
+        path = "/home/edwardjones/git/RadioisotopeDataToolbox/"
+
+        try:
+            self.distances = self.custom_params['distances']
+            self.labels = self.custom_params['isotope_labels']
+        except:
+            self.labels = ['Am-241', 'Ba-133', 'Background', 'Co-60', 'Cs-137', 'Eu-152']
+            from radioisotopedatatoolbox.DataGenerator import IsotopeRateFetcher, BackgroundRateFetcher, LinearMovementIsotope
+            myisotope = IsotopeRateFetcher('Co-60', data_path=path)
+            background = BackgroundRateFetcher(intensity=1, data_path=path)
         
+        
+            moving_isotope = LinearMovementIsotope(
+            myisotope, background=background, path_limits=[-2, 2],
+            duration=5000, min_distance=0.1)
+            self.distances = moving_isotope.distances
         
     def animate_bin(self, bin_number, layer_index):
         ''' Animates a bin '''
-        path = "/home/edwardjones/git/RadioisotopeDataToolbox/"
         
         from snntoolbox.simulation.utils import get_shape_from_label
         
@@ -188,29 +223,16 @@ class OutputDataProcessor():
         fig.set_figheight(15)
         fig.set_figwidth(15)
         
-        try:
-            distances = self.custom_params['distances']
-            labels = self.custom_params['isotope_labels']
-        except:
-            labels = ['Am-241', 'Ba-133', 'Background', 'Co-60', 'Cs-137', 'Eu-152']
-            from radioisotopedatatoolbox.DataGenerator import IsotopeRateFetcher, BackgroundRateFetcher, LinearMovementIsotope
-            myisotope = IsotopeRateFetcher('Co-60', data_path=path)
-            background = BackgroundRateFetcher(intensity=1, data_path=path)
-        
-        
-            moving_isotope = LinearMovementIsotope(
-            myisotope, background=background, path_limits=[-2, 2],
-            duration=5000, min_distance=0.1)
-            distances = moving_isotope.distances
+        self.get_isotope_extras()
             
-        if labels is not None:
-            labels = np.insert(labels,0, '')
-            print(labels)
-            ax3.set_xticklabels(labels, rotation='vertical')
+        if self.labels is not None:
+            self.labels = np.insert(labels,0, '')
+            print(self.labels)
+            ax3.set_xticklabels(self.labels, rotation='vertical')
         
         ax3.yaxis.set_visible(False)
         ax3.set_xlabel("Isotope classification (spikes in final layer)")
-        ax1.plot(range(self.runtime), distances)
+        ax1.plot(range(self.runtime), self.distances)
         ax1.set_ylabel('Distance between source and detector/m')
         ax1.set_xlabel('Time/ms')  
         

@@ -160,15 +160,24 @@ def run(args):
 
 
 if __name__ == "__main__":
-#     import isotope_argparser
-#     args = isotope_argparser.main()
-#     run(args)
+    #===========================================================================
+    # import isotope_argparser
+    # args = isotope_argparser.main()
+    # run(args)
+    #===========================================================================
 
     from pynn_object_serialisation.OutputDataProcessor import OutputDataProcessor
     
     proc = OutputDataProcessor("results/flyby_test.npz")
 #     proc.plot_spikes(0, -1, list(labels))
 #     plt.show()
-    proc.animate_bin(0, -1)
-    proc.plot_spikes(0,0)
+    #proc.animate_bin(0, -1)
+    proc.label_names = ['Am-241', 'Ba-133', 'Background', 'Co-60', 'Cs-137', 'Eu-152']
+    #proc.get_isotope_extras()
+    #trained_distances = np.argwhere(proc.distances<0.2)
+    min_time = 0#np.min(trained_distances)
+    max_time = 5000#np.max(trained_distances)
+    proc.plot_output_continuous(min_time, max_time)
+    plt.xlabel("Isotope Classification")
+    plt.ylabel("Spikes between {}ms and {}ms".format(min_time, max_time))
     plt.show()
