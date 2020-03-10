@@ -166,6 +166,7 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
     total_no_synapses = 0
     max_synapses_per_neuron = 0
     no_afferents = {}
+    no_neurons = {}
     print("Population reconstruction begins...")
     for pop_no in range(no_pops):
         pop_info = json_data['populations'][str(pop_no)]
@@ -195,6 +196,7 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
                 pop_cellparams[k] = replace_params[k]
 
         no_afferents[pop_info['label']] = 0
+        no_neurons[pop_info['label']] = pop_info['n_neurons']
         total_no_neurons += pop_info['n_neurons']
         populations.append(
             sim.Population(
@@ -227,12 +229,12 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
 
         number_of_synapses = _conn.shape[0]
         max_synapses_per_neuron = max(max_synapses_per_neuron,
-                                      number_of_synapses/post_n_neurons)
+                                      number_of_synapses / post_n_neurons)
         # create the projection
         conn_label = proj_info['pre_label'] + "_to_" + proj_info['post_label']
         print("Reconstructing proj", conn_label)
         receptor_type = DEFAULT_RECEPTOR_TYPES[proj_info['receptor_type']]
-        _c = Fore.GREEN if receptor_type =="excitatory" else Fore.RED
+        _c = Fore.GREEN if receptor_type == "excitatory" else Fore.RED
         print("\t{:20}".format(format(number_of_synapses, ",")),
               _c, DEFAULT_RECEPTOR_TYPES[proj_info['receptor_type']],
               Style.RESET_ALL,
@@ -261,12 +263,16 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
     write_report("Total number of synapses", total_no_synapses)
     if total_no_synapses > 0:
         write_report("Avg fan in", total_no_synapses / total_no_neurons)
-        write_report("Max fan in", max_synapses_per_neuron)
     else:
         write_report("Avg fan in", "NaN")
-        write_report("Max fan in", "NaN")
+    print("-" * 80)
     print("Number of afferents (exc + inh)")
-    pp(no_afferents)
+    for k in no_afferents.keys():
+        print("Total afferents for {:35} : {:25}".format(
+            k,
+            format(int(no_afferents[k]), ",")))
+        print("\tthat is {:15.2f} synapses / neuron".format(
+            no_afferents[k] / no_neurons[k]))
     print("=" * 80)
     return populations, projections, custom_params
 
