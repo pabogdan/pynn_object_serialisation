@@ -7,3 +7,4 @@ matplotlib
 tensorflow
 argparse
 pillow
+colorama
