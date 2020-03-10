@@ -55,7 +55,7 @@ def run(args):
     output_v = []
     populations, projections, custom_params = restore_simulator_from_file(
     sim, args.model,
-    is_input_vrpss=True,
+    input_type='vrpss',
     vrpss_cellparams=input_params,
     replace_params=replace)
     dt = sim.get_time_step()
@@ -116,11 +116,11 @@ def run(args):
 
     def reset_membrane_voltage():        
         for population in populations[1:]:
-            population.set(v=0)
+            population.set_initial_value(variable="v", value=0)
         return
     
     for population in populations[1:]:
-        population.initialize(v=0) 
+        pop.set_initial_value(variable="v", value=0) 
     for presentation in range(testing_examples):
         sim.run(t_stim)
         reset_membrane_voltage()
