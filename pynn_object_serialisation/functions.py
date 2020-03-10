@@ -128,7 +128,9 @@ def intercept_simulator(sim, output_filename=None, cellparams=None,
 def restore_simulator_from_file(sim, filename, prune_level=1.,
                                 is_input_vrpss=False,
                                 vrpss_cellparams=None,
-                                replace_params=None, n_boards_required=None):
+                                replace_params=None, n_boards_required=None,
+                                time_scale_factor=None, first_n_layers=None
+                                ):
     replace_params = replace_params or {}
 
     if not is_input_vrpss and vrpss_cellparams:
@@ -146,7 +148,9 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
     # Load connectivity data from disk
     connectivity_data = np.load(filename + ".npz", allow_pickle=True)
 
-    no_pops = len(json_data['populations'].keys())
+    # the number of populations to be reconstructed is either passed in
+    # (first_n_layers) or the total number of available populations
+    no_pops = first_n_layers or len(json_data['populations'].keys())
     no_proj = len(json_data['projections'].keys())
     # setup
     setup_params = json_data['setup']
@@ -154,7 +158,8 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
     sim.setup(setup_params['machine_time_step'] / 1000.,
               setup_params['min_delay'],
               setup_params['max_delay'],
-              n_boards_required=n_boards_required)
+              n_boards_required=n_boards_required,
+              time_scale_factor=time_scale_factor)
 
     try:
         custom_params = json_data['custom_params']
@@ -215,6 +220,10 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
     for proj_no in range(no_proj):
         # temporary utility variable
         proj_info = json_data['projections'][str(proj_no)]
+        conn_label = proj_info['pre_label'] + "_to_" + proj_info['post_label']
+        if proj_info['post_label'] not in no_neurons.keys():
+            print("Aborting the creation of proj", conn_label)
+            continue
 
         # id of projection used to retrieve from list connectivity
         _conn = utils._prune_connector(connectivity_data[str(proj_info['id'])],
@@ -231,7 +240,6 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
         max_synapses_per_neuron = max(max_synapses_per_neuron,
                                       number_of_synapses / post_n_neurons)
         # create the projection
-        conn_label = proj_info['pre_label'] + "_to_" + proj_info['post_label']
         print("Reconstructing proj", conn_label)
         receptor_type = DEFAULT_RECEPTOR_TYPES[proj_info['receptor_type']]
         _c = Fore.GREEN if receptor_type == "excitatory" else Fore.RED
