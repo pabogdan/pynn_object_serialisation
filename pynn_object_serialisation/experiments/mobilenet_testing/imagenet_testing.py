@@ -97,10 +97,7 @@ populations, projections, custom_params = restore_simulator_from_file(
     is_input_vrpss=True,
     vrpss_cellparams=input_params,
     replace_params=replace,
-    prune_level=args.conn_level)
-sim.set_number_of_neurons_per_core(SpikeSourcePoissonVariable, 16)
-sim.set_number_of_neurons_per_core(sim.SpikeSourcePoisson, 16)
-sim.set_number_of_neurons_per_core(sim.IF_curr_exp, 64)
+    prune_level=args.conn_level, n_boards_required=90)
 set_i_offsets(populations, runtime)
 
 # set up recordings for other layers if necessary
