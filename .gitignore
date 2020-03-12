@@ -1,3 +1,10 @@
-/.project
-/.pydevproject
-*/__pycache__
+.project
+.pydevproject
+__pycache__
+.idea
+*.cfg
+*.json
+*.npz
+application_generated_data_files
+reports
+pynn_object_serialisation.egg-info
