@@ -127,7 +127,9 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
                                 input_type = None,
                                 vrpss_cellparams=None,
                                 ssa_cellparams = None,
-                                replace_params=None, n_boards_required=None):
+                                replace_params=None, 
+                                n_boards_required=None,
+                                time_scale_factor=None):
 
     replace_params = replace_params or {}
 
@@ -151,10 +153,12 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
     # setup
     setup_params = json_data['setup']
     # TODO move setup outside into whatever experiment is run
+    time_scale_factor = time_scale_factor or 1
     sim.setup(setup_params['machine_time_step'] / 1000.,
               setup_params['min_delay'],
               setup_params['max_delay'],
-              n_boards_required=n_boards_required)
+              n_boards_required=n_boards_required,
+              time_scale_factor=time_scale_factor)
 
     try:
         custom_params = json_data['custom_params']
@@ -170,7 +174,7 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
         pop_info = json_data['populations'][str(pop_no)]
         p_id = pop_info['id']
         pop_cellclass = pydoc.locate(pop_info['cellclass'])
-            print("Reconstructing pop", pop_info['label'], "containing",  pop_info['n_neurons'], "neurons")
+        print("Reconstructing pop", pop_info['label'], "containing",  pop_info['n_neurons'], "neurons")
         if input_type is "vrpss" and (
                 pop_cellclass is SpikeSourcePoissonVariable or
                 pop_cellclass is SpikeSourceArray or

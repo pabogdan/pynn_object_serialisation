@@ -10,6 +10,8 @@ DEFAULT_RATE_SCALING = 1000  # Hz
 DEFAULT_T_STIM = 200  # ms
 DEFAULT_TESTING_EXAMPLES = 1
 DEFAULT_CHUNK_SIZE = 100
+DEFAULT_START_INDEX = 0
+DEFAULT_TIME_SCALE_FACTOR = 100
 
 parser = argparse.ArgumentParser(
     description='converted-MNIST argparser',
@@ -83,6 +85,13 @@ parser.add_argument('--chunk_size', type=int,
                     help='the number of bins per chunk',
                     default=DEFAULT_CHUNK_SIZE)
 
+parser.add_argument('--start_index', type=int,
+                    help='first index of testing set',
+                    default=DEFAULT_START_INDEX)
+
+parser.add_argument('--time_scale_factor', type=float,
+                    help='the slowdown factor for the simulation',
+                    default=DEFAULT_TIME_SCALE_FACTOR)
 
 def main():
     return parser.parse_args()
