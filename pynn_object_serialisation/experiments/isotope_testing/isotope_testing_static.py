@@ -32,6 +32,20 @@ def convert_rate_array_to_VRPSS(input_rates: np.array, duration=1000):
         'starts': start_values,
         'durations': durations}
 
+def get_result_filename(args):
+    if args.result_filename:
+        result_filename = args.result_filename
+    else:
+        result_filename = "isotope_results"
+        if args.suffix:
+            result_filename += args.suffix
+        else:
+            import pylab
+
+    now = pylab.datetime.datetime.now()
+    result_filename += "_" + str(args.start_index)
+    return result_filename
+
 def run(args):
 
     # Checking directory structure exists
@@ -47,7 +61,6 @@ def run(args):
     x_test = np.load("dataset/x_test.npz")['arr_0']
     y_test = np.load("dataset/y_test.npz")['arr_0']
 
-    
     labels = np.load("dataset/labels.npz", allow_pickle=True)['arr_0']
     
     # Produce parameter replacement dict
@@ -74,13 +87,14 @@ def run(args):
     path = str(Path(getcwd()).parent) + '/'
     
     path = "/home/edwardjones/git/RadioisotopeDataToolbox/"
-    input_params = convert_rate_array_to_VRPSS(x_test[:args.testing_examples], duration=args.t_stim)    
+    input_params = convert_rate_array_to_VRPSS(x_test[args.start_index:args.start_index+args.testing_examples], duration=args.t_stim)    
     output_v = []
     populations, projections, custom_params = restore_simulator_from_file(
         sim, args.model,
         input_type='vrpss',
         vrpss_cellparams=input_params,
-        replace_params=replace)
+        replace_params=replace,
+        time_scale_factor=args.time_scale_factor)
     
     dt = sim.get_time_step()
     N_layer = len(populations)
@@ -116,7 +130,6 @@ def run(args):
             population.set_initial_value(variable="v", value=0)
         return
     
-    import pdb; pdb.set_trace()
     
     for presentation in range(args.testing_examples):
         print("Presenting test example {}".format(presentation))
@@ -128,20 +141,8 @@ def run(args):
         output_v = populations[-1].spinnaker_get_data('v')
     
     # save results
-    sim.end()
-    if args.result_filename:
-        results_filename = args.result_filename
-    else:
-        results_filename = "isotope_results"
-        if args.suffix:
-            results_filename += args.suffix
-        else:
-            import pylab
-
-        now = pylab.datetime.datetime.now()
-        results_filename += "_" + now.strftime("_%H%M%S_%d%m%Y")
-
-    np.savez_compressed(os.path.join(args.result_dir, results_filename),
+    result_filename=get_result_filename(args)
+    np.savez_compressed(os.path.join(args.result_dir, result_filename),
                         output_v=output_v,
                         neo_spikes_dict=neo_spikes_dict,
                         y_test=y_test,
@@ -160,7 +161,8 @@ if __name__ == "__main__":
 
     from pynn_object_serialisation.OutputDataProcessor import OutputDataProcessor
     
-    proc = OutputDataProcessor("results/"+results_filename)
+    proc = OutputDataProcessor("results/"+get_result_filename(args)+'.npz')
     import pdb; pdb.set_trace()
+    print(proc.get_accuracy())
     
     
