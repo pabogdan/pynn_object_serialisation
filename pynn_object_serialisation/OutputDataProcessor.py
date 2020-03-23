@@ -23,16 +23,23 @@ class OutputDataProcessor():
         self.input_layer_name = self.layer_names[0]
         self.output_layer_name = self.layer_names[-1]
         self.input_layer_shape = (3238,1)
+        self.layer_shapes = self.get_layer_shapes()
         self.input_spikes = self.spikes_dict[self.input_layer_name]
         self.output_spikes = self.spikes_dict[self.output_layer_name]
         self.number_of_examples = self.runtime // self.t_stim
         self.y_test = np.array(self.data['y_test'][:self.number_of_examples], dtype=np.int8)
+        if len(self.y_test.shape) >1 and\
+                                        (self.y_test.shape[-1] == self.layer_shapes[-1][0] or\
+                                        self.y_test.shape[0] == self.layer_shapes[-1][0]):
+            self.y_test = self.convert_output_to_index(self.y_test)
         self.y_pred = np.array(self.get_batch_predictions(), dtype=np.int8) 
         labels = np.load(
             '/mnt/snntoolbox/snn_toolbox_private/examples/models/05-mobilenet_dwarf_v1/label_names.npz')
         self.label_names = labels['arr_0']
         labels.close()
-        self.layer_shapes = self.get_layer_shapes()
+
+    def convert_output_to_index(self, data):
+        return np.argmax(data, axis=1)
 
     def summary(self):
         print(self.layer_names)
