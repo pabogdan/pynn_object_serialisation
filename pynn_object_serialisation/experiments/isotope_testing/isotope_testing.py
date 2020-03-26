@@ -76,7 +76,7 @@ def run(args):
     from os import getcwd
     path = str(Path(getcwd()).parent) + '/'
     
-    path = "/home/edwardjones/git/RadioisotopeDataToolbox/"
+    path = "/mnt/snntoolbox/RadioisotopeDataToolbox/"
     
     myisotope = IsotopeRateFetcher('Co-60', data_path=path, intensity=0.1)
     background = BackgroundRateFetcher(intensity=0.1, data_path=path)

@@ -19,14 +19,14 @@ def convert_rate_array_to_VRPSS(input_rates: np.array, duration=1000):
     print("Generating VRPSS...")
     number_of_examples = input_rates.shape[0]
     number_of_input_neurons = input_rates.shape[1]
-    input_rates = np.ravel(input_rates)
+    input_rates = np.squeeze(input_rates)
+    input_rates = np.moveaxis(input_rates, 0, -1)
     run_duration = number_of_examples * duration
     start_values = np.array(
         [range(0, run_duration, duration)] * number_of_input_neurons)
-    start_values = np.ravel(start_values.T)
     durations = np.repeat(duration,
                           number_of_examples * number_of_input_neurons)
-
+    durations = durations.reshape(start_values.shape)
     return {
         'rates': input_rates,
         'starts': start_values,
