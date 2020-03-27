@@ -94,7 +94,7 @@ class OutputDataProcessor():
         higher_end_bin_time = (bin_number + 1) * self.t_stim + self.delay
         if higher_end_bin_time > self.runtime:
             higher_end_bin_time = self.runtime
-            print('Final bin cut off.')
+            #print('Final bin cut off.')
         return lower_end_bin_time, higher_end_bin_time
 
     def get_bin_spikes(self, bin_number, layer_name):
@@ -174,8 +174,7 @@ class OutputDataProcessor():
         self.plot_output(bin_number)
         self.plot_bin(bin_number, self.output_layer_name)
 
-        
-        
-        
-        
-        
+if __name__ == "__main__":
+    import OutputDataProcessor_argparser
+    args = OutputDataProcessor_argparser.main()
+    print(OutputDataProcessor(args.data_file).get_accuracy())
