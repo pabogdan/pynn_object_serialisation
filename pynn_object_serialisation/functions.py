@@ -174,7 +174,7 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
         pop_info = json_data['populations'][str(pop_no)]
         p_id = pop_info['id']
         pop_cellclass = pydoc.locate(pop_info['cellclass'])
-        print("Reconstructing pop", pop_info['label'], "containing",  pop_info['n_neurons'], "neurons")
+        print("Reconstructing pop", pop_info['label'], "containing",  pop_info['n_neurons'], " ", pop_cellclass, " ", "neurons")
         if input_type is "vrpss" and (
                 pop_cellclass is SpikeSourcePoissonVariable or
                 pop_cellclass is SpikeSourceArray or
