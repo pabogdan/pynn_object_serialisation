@@ -15,11 +15,11 @@ from radioisotopedatatoolbox.DataGenerator import RandomIsotopeFlyBys
 import numpy as np
 import os
 
-def convert_rate_array_to_VRPSS(input_rates: np.array, duration=1000):
+def convert_rate_array_to_VRPSS(input_rates: np.array, max_rate=1000, duration=1000):
     print("Generating VRPSS...")
     number_of_examples = input_rates.shape[0]
     number_of_input_neurons = input_rates.shape[1]
-    input_rates = np.squeeze(input_rates)
+    input_rates = max_rate*(np.squeeze(input_rates))
     input_rates = np.moveaxis(input_rates, 0, -1)
     run_duration = number_of_examples * duration
     start_values = np.array(
@@ -42,7 +42,6 @@ def get_result_filename(args):
         else:
             import pylab
 
-    now = pylab.datetime.datetime.now()
     result_filename += "_" + str(args.start_index)
     return result_filename
 
@@ -64,19 +63,19 @@ def run(args):
     labels = np.load("dataset/labels.npz", allow_pickle=True)['arr_0']
     
     # Produce parameter replacement dict
-    replace = {'e_rev_E': 0.0,
-                'tau_m': 20.0,
-                'cm': 1.0,
-                'v_thresh': -50.0,
-                'v_rest': -65.0,
-                'i_offset': 0.0,
-                'tau_syn_I': 5.0,
-                'tau_syn_E': 5.0,
-                'tau_refrac': 0.1,
-                'v_reset': -65.0,
-                'e_rev_I': -70.0}
+#    replace = {'e_rev_E': 0.0,
+#                'tau_m': 20.0,
+#                'cm': 1.0,
+#                'v_thresh': -50.0,
+#                'v_rest': -65.0,
+#                'i_offset': 0.0,
+#                'tau_syn_I': 5.0,
+#                'tau_syn_E': 5.0,
+#                'tau_refrac': 0.1,
+#                'v_reset': -65.0,
+#                'e_rev_I': -70.0}
      
-       
+    replace = None       
     t_stim = args.t_stim
     runtime = t_stim * args.testing_examples
     
@@ -87,7 +86,7 @@ def run(args):
     path = str(Path(getcwd()).parent) + '/'
     
     path = "/home/edwardjones/git/RadioisotopeDataToolbox/"
-    input_params = convert_rate_array_to_VRPSS(x_test[args.start_index:args.start_index+args.testing_examples], duration=args.t_stim)    
+    input_params = convert_rate_array_to_VRPSS(x_test[args.start_index:args.start_index+args.testing_examples], max_rate=args.rate_scaling, duration=args.t_stim)    
     output_v = []
     populations, projections, custom_params = restore_simulator_from_file(
         sim, args.model,
@@ -102,7 +101,7 @@ def run(args):
     max_delay = sim.get_max_delay()
     sim.set_number_of_neurons_per_core(SpikeSourcePoissonVariable, 16)
     sim.set_number_of_neurons_per_core(sim.SpikeSourcePoisson, 16)
-    sim.set_number_of_neurons_per_core(sim.IF_curr_exp, 64)
+    sim.set_number_of_neurons_per_core(sim.IF_curr_exp, 32)
     sim.set_number_of_neurons_per_core(sim.IF_cond_exp, 64)
     old_runtime = custom_params['runtime']
     set_i_offsets(populations, runtime, old_runtime=old_runtime)
@@ -162,7 +161,6 @@ if __name__ == "__main__":
     from pynn_object_serialisation.OutputDataProcessor import OutputDataProcessor
     
     proc = OutputDataProcessor("results/"+get_result_filename(args)+'.npz')
-    import pdb; pdb.set_trace()
     print(proc.get_accuracy())
     
     
