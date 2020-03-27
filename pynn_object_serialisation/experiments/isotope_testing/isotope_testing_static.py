@@ -19,7 +19,7 @@ def convert_rate_array_to_VRPSS(input_rates: np.array, max_rate=1000, duration=1
     print("Generating VRPSS...")
     number_of_examples = input_rates.shape[0]
     number_of_input_neurons = input_rates.shape[1]
-    input_rates = max_rate*(np.squeeze(input_rates))
+    input_rates = max_rate*(input_rates[:,...,0])
     input_rates = np.moveaxis(input_rates, 0, -1)
     run_duration = number_of_examples * duration
     start_values = np.array(
@@ -55,31 +55,11 @@ def run(args):
 
     # Load data from file
     
-    x_train = np.load("dataset/x_train.npz")['arr_0']
-    y_train = np.load("dataset/y_train.npz")['arr_0']
     x_test = np.load("dataset/x_test.npz")['arr_0']
     y_test = np.load("dataset/y_test.npz")['arr_0']
 
-    labels = np.load("dataset/labels.npz", allow_pickle=True)['arr_0']
-    
-    # Produce parameter replacement dict
-#    replace = {'e_rev_E': 0.0,
-#                'tau_m': 20.0,
-#                'cm': 1.0,
-#                'v_thresh': -50.0,
-#                'v_rest': -65.0,
-#                'i_offset': 0.0,
-#                'tau_syn_I': 5.0,
-#                'tau_syn_E': 5.0,
-#                'tau_refrac': 0.1,
-#                'v_reset': -65.0,
-#                'e_rev_I': -70.0}
-     
     replace = None       
-    t_stim = args.t_stim
-    runtime = t_stim * args.testing_examples
-    
-    from radioisotopedatatoolbox.DataGenerator import IsotopeRateFetcher, BackgroundRateFetcher, LinearMovementIsotope
+    runtime = args.t_stim * args.testing_examples
     
     from pathlib import Path
     from os import getcwd
@@ -87,7 +67,6 @@ def run(args):
     
     path = "/home/edwardjones/git/RadioisotopeDataToolbox/"
     input_params = convert_rate_array_to_VRPSS(x_test[args.start_index:args.start_index+args.testing_examples], max_rate=args.rate_scaling, duration=args.t_stim)    
-    output_v = []
     populations, projections, custom_params = restore_simulator_from_file(
         sim, args.model,
         input_type='vrpss',
@@ -106,6 +85,7 @@ def run(args):
     old_runtime = custom_params['runtime']
     set_i_offsets(populations, runtime, old_runtime=old_runtime)
     spikes_dict = {}
+    output_v = []
     neo_spikes_dict = {}
 
     def record_output(populations, offset, output):
@@ -132,7 +112,7 @@ def run(args):
     
     for presentation in range(args.testing_examples):
         print("Presenting test example {}".format(presentation))
-        sim.run(t_stim)
+        sim.run(args.t_stim)
         reset_membrane_voltage()
     for pop in populations[:]:
         spikes_dict[pop.label] = pop.spinnaker_get_data('spikes')
@@ -146,7 +126,7 @@ def run(args):
                         neo_spikes_dict=neo_spikes_dict,
                         y_test=y_test,
                         N_layer=N_layer,
-                        t_stim=t_stim,
+                        t_stim=args.t_stim,
                         runtime=runtime,
                         sim_time=runtime,
                         dt=dt,
