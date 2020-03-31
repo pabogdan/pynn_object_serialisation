@@ -83,24 +83,29 @@ for pop in populations:
     spikes_dict[pop.label] = pop.spinnaker_get_data('spikes')
 # the following takes more time than spinnaker_get_data
 for pop in populations:
-    neo_spikes_dict[pop.label] = pop.get_data('spikes')
+    # neo_spikes_dict[pop.label] = pop.get_data('spikes')
+    neo_spikes_dict[pop.label] = []
 
-for pop in populations:
-    try:
-        final_connectivity[pop.label] = \
-            np.array(sim.get(('weight', 'delay'),
-                           format="list")._get_data_items())
-    except AttributeError as ae:
-        print("Careful! Something happened when retrieving the "
-              "connectivity:", ae,
-              "\nRetrying using standard PyNN syntax...")
-        final_connectivity[pop.label] = \
-            np.array(sim.get(('weight', 'delay'), format="list"))
-    except TypeError as te:
-        print("Connectivity is None (", te,
-              ") for connection", pop.label)
-        print("Connectivity as empty array.")
-        final_connectivity[pop.label] = np.array([])
+try:
+    for proj in projections:
+        try:
+            final_connectivity[proj.label] = \
+                np.array(proj.get(('weight', 'delay'),
+                               format="list")._get_data_items())
+        except AttributeError as ae:
+            print("Careful! Something happened when retrieving the "
+                  "connectivity:", ae,
+                  "\nRetrying using standard PyNN syntax...")
+            final_connectivity[proj.label] = \
+                np.array(proj.get(('weight', 'delay'), format="list"))
+        except TypeError as te:
+            print("Connectivity is None (", te,
+                  ") for connection", proj.label)
+            print("Connectivity as empty array.")
+            final_connectivity[proj.label] = np.array([])
+except:
+    traceback.print_exc()
+    print("Couldn't retrieve connectivity.")
 if args.record_v:
     output_v = populations[-1].spinnaker_get_data('v')
 # save results
@@ -125,6 +130,7 @@ sim_params = {
     "wall_clock_sim_run_time": str(sim_total_time),
 }
 
+# TODO Retrieve original connectivity and JSON and store here.
 np.savez_compressed(os.path.join(args.result_dir, results_filename),
                     output_v=output_v,
                     neo_spikes_dict=neo_spikes_dict,

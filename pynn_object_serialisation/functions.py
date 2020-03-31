@@ -220,7 +220,9 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
     for proj_no in range(no_proj):
         # temporary utility variable
         proj_info = json_data['projections'][str(proj_no)]
-        conn_label = proj_info['pre_label'] + "_to_" + proj_info['post_label']
+        receptor_type = DEFAULT_RECEPTOR_TYPES[proj_info['receptor_type']]
+        _type = "_exc" if receptor_type == "excitatory" else "_inh"
+        conn_label = proj_info['pre_label'] + "_to_" + proj_info['post_label'] + _type
         if proj_info['post_label'] not in no_neurons.keys():
             print("Aborting the creation of proj", conn_label)
             continue
@@ -241,7 +243,6 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
                                       number_of_synapses / post_n_neurons)
         # create the projection
         print("Reconstructing proj", conn_label)
-        receptor_type = DEFAULT_RECEPTOR_TYPES[proj_info['receptor_type']]
         _c = Fore.GREEN if receptor_type == "excitatory" else Fore.RED
         print("\t{:20}".format(format(number_of_synapses, ",")),
               _c, DEFAULT_RECEPTOR_TYPES[proj_info['receptor_type']],
