@@ -1,64 +1,7 @@
-import numpy as np
-import pylab as plt
-from mpl_toolkits.mplot3d import Axes3D
-from matplotlib import cm as cm_mlib
-from matplotlib.ticker import LinearLocator, FormatStrFormatter
-import scipy
-from matplotlib import animation, rc, colors
-from brian2.units import *
-import matplotlib as mlib
-from scipy import stats
-from pprint import pprint as pp
-from mpl_toolkits.axes_grid1 import make_axes_locatable, ImageGrid
-import traceback
-import os
-import copy
-import neo
-from datetime import datetime
-import warnings
-import ntpath
-from colorama import Fore, Style, init as color_init
-import pandas as pd
-import string
-from matplotlib.ticker import MultipleLocator
 import json
 import pynn_object_serialisation.serialisation_utils as utils
 from pynn_object_serialisation.functions import DEFAULT_RECEPTOR_TYPES
-
-mlib.use('Agg')
-warnings.filterwarnings("ignore", category=UserWarning)
-warnings.filterwarnings("ignore", category=RuntimeWarning)
-
-# ensure we use viridis as the default cmap
-plt.viridis()
-
-# ensure we use the same rc parameters for all matplotlib outputs
-mlib.rcParams.update({'font.size': 24})
-mlib.rcParams.update({'errorbar.capsize': 5})
-mlib.rcParams.update({'figure.autolayout': True})
-viridis_cmap = mlib.cm.get_cmap('viridis')
-
-
-def plot_barplot():
-    """
-    Plot histogram of e.g.
-    """
-    pass
-
-
-def plot_histogram():
-    """
-    Plot histogram of e.g.
-    """
-    pass
-
-
-def save_figure():
-    pass
-
-
-def write_report(msg, value):
-    print("{:<50}:{:>14}".format(msg, format(int(value), ",")))
+from pynn_object_serialisation.experiments.mobilenet_testing.analysis_common import *
 
 
 def network_statistics(filename, fig_folder, dark_background=False):
@@ -94,6 +37,7 @@ def network_statistics(filename, fig_folder, dark_background=False):
     no_afferents = {}
     all_neurons = {}
     all_connections = {}
+    conn_py_post = {}
     layer_order = []
     projection_order = []
     for pop_no in range(no_pops):
@@ -103,6 +47,7 @@ def network_statistics(filename, fig_folder, dark_background=False):
         no_afferents[label] = 0
         layer_order.append(label)
         all_neurons[label] = pop_info['n_neurons']
+        conn_py_post[label] = [[], []]
         total_no_neurons += pop_info['n_neurons']
 
     for proj_no in range(no_proj):
@@ -126,14 +71,18 @@ def network_statistics(filename, fig_folder, dark_background=False):
         receptor_type = DEFAULT_RECEPTOR_TYPES[proj_info['receptor_type']]
         syn_type = "_exc" if receptor_type == "excitatory" else "_inh"
         all_connections[conn_label + syn_type] = _conn
+        conn_py_post[proj_info['post_label']][proj_info['receptor_type']] = _conn
         projection_order.append(conn_label + syn_type)
         no_afferents[proj_info['post_label']] += number_of_synapses
-
+    for k, v in no_afferents.items():
+        if v == 0:
+            del conn_py_post[k]
     print("=" * 80)
     print("Reports")
     print("-" * 80)
     write_report("Total number of neurons", total_no_neurons)
     write_report("Total number of synapses", total_no_synapses)
+    write_report("Total number of layers", no_pops)
     if total_no_synapses > 0:
         write_report("Avg fan in", total_no_synapses / total_no_neurons)
     else:
@@ -184,6 +133,9 @@ def network_statistics(filename, fig_folder, dark_background=False):
     print("Plots")
     print("-" * 80)
     # TODO add plots
+    plot_weight_barplot(all_neurons, conn_py_post,
+                        layer_order=layer_order,
+                        current_fig_folder=current_fig_folder)
 
 
 if __name__ == "__main__":
