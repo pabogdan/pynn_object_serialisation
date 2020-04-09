@@ -20,7 +20,7 @@ def convert_rate_array_to_VRPSS(input_rates: np.array, max_rate=1000, duration=1
     number_of_examples = input_rates.shape[0]
     number_of_input_neurons = input_rates.shape[1]
     input_rates = max_rate*(input_rates[:,...,0])
-    input_rates = np.moveaxis(input_rates, 0, -1)
+    input_rates = np.transpose(input_rates)
     run_duration = number_of_examples * duration
     start_values = np.array(
         [range(0, run_duration, duration)] * number_of_input_neurons)
@@ -80,8 +80,8 @@ def run(args):
     max_delay = sim.get_max_delay()
     sim.set_number_of_neurons_per_core(SpikeSourcePoissonVariable, 16)
     sim.set_number_of_neurons_per_core(sim.SpikeSourcePoisson, 16)
-    sim.set_number_of_neurons_per_core(sim.IF_curr_exp, 32)
-    sim.set_number_of_neurons_per_core(sim.IF_cond_exp, 64)
+    sim.set_number_of_neurons_per_core(sim.IF_curr_exp, 128)
+    sim.set_number_of_neurons_per_core(sim.IF_cond_exp, 128)
     old_runtime = custom_params['runtime']
     set_i_offsets(populations, runtime, old_runtime=old_runtime)
     spikes_dict = {}
@@ -108,7 +108,6 @@ def run(args):
         for population in populations[1:]:
             population.set_initial_value(variable="v", value=0)
         return
-    
     
     for presentation in range(args.testing_examples):
         print("Presenting test example {}".format(presentation))
@@ -140,7 +139,7 @@ if __name__ == "__main__":
 
     from pynn_object_serialisation.OutputDataProcessor import OutputDataProcessor
     
-    proc = OutputDataProcessor("results/"+get_result_filename(args)+'.npz')
+    proc = OutputDataProcessor(args.result_dir +'/'+ get_result_filename(args)+'.npz')
     print(proc.get_accuracy())
     
     
