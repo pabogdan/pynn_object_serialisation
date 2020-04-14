@@ -19,21 +19,22 @@ import numpy as np
 import os
 import sys
 
-class serialised_snn (object)
+class serialised_snn:
     """ This class represented a serialised snn model and gives the possibility to 
     run this model serially and in parallel """
 
-    def __init__():
-        self.model_path = model_path
-        self.testing_examples = testing_examples
-        self.parallel_processes = parallel_processes
-        self.t_stim = t_stim
+    def __init__(self, args):
+        self.model_path = args.model
+        self.testing_examples = args.testing_examples
+        self.parallel_processes = args.number_of_threads
+        self.t_stim = args.t_stim
         self.dataset = self.load_dataset()
-        self.results_dir = results_dir
-        self.base_filename_results = base_filename_results
-        self.model_for_size = self.load_model()
-        self.record_v = False
+        self.result_dir = args.result_dir
+        self.base_filename_results = args.result_filename
+        self.input_params = {}
+        self.record_v = args.record_v
         self.start_index = False
+        self.time_scale_factor = args.time_scale_factor
         self.results = []
 
     def in_parallel(self, func):
@@ -54,21 +55,26 @@ class serialised_snn (object)
             sys.stderr = g
         
         def inner(*args, **kwargs):
+            chunk_size = self.testing_examples // self.number_of_processes
             #Make a pool
-            p = Pool(initializer=init_worker, self.parallel_processes)
+            p = Pool(initializer=init_worker, processes=self.parallel_processes)
             #Run the pool
-            p.starmap(func, zip(itertools.repeat(*args), itertools.repeat(**kwargs), list(range(0, args.testing_examples, args.chunk_size))))
+            p.starmap(func, zip(itertools.repeat(*args), itertools.repeat(**kwargs), list(range(0, self.testing_examples, chunk_size))))
         
         return inner
 
     def load_model(self):
         """Loads model from model path"""
+        
+        self.generate_VRPSS()
         replace = None
+  
         populations, projections, custom_params = restore_simulator_from_file(
         sim, self.model_path,
         input_type='vrpss',
-        vrpss_cellparams=input_params,
-        replace_params=replace)
+        vrpss_cellparams=self.input_params,
+        replace_params=replace,
+        time_scale_factor=args.time_scale_factor)
         dt = sim.get_time_step()
         min_delay = sim.get_min_delay()
         max_delay = sim.get_max_delay()
@@ -90,7 +96,7 @@ class serialised_snn (object)
     def generate_VRPSS(self):
         """Generates variable rate poisson spike source"""
         
-        N_layer = len(self.model_for_size.populations[0]) # number of neurons in input population
+        N_layer = self.x_test.shape[1] # number of neurons in input population
         testing_examples = args.chunk_size
         runtime = testing_examples * self.t_stim
         number_of_slots = int(runtime / t_stim)
@@ -104,7 +110,7 @@ class serialised_snn (object)
         _0_to_1_rates = rates / float(np.max(rates))
         rates = _0_to_1_rates * args.rate_scaling
 
-        input_params = {
+        self.input_params = {
         "rates": rates,
         "durations": durations,
         "starts": starts
@@ -134,20 +140,20 @@ class serialised_snn (object)
             import pylab
             filename = self.base_filename_results + "_" + now.strftime("_%H%M%S_%d%m%Y")
 
-        np.savez_compressed(os.path.join(self.result_dir, filename)),
-                output_v=output_v,
-                neo_spikes_dict=neo_spikes_dict,
-                y_test=y_test,
-                N_layer=N_layer,
-                t_stim=t_stim,
-                runtime=runtime,
-                sim_time=runtime,
-                dt = dt,
-                **spikes_dict)
+        np.savez_compressed(os.path.join(self.result_dir, filename),\
+            output_v=output_v,\
+            neo_spikes_dict=neo_spikes_dict,\
+            y_test=y_test,\
+            N_layer=N_layer,\
+            t_stim=t_stim,\
+            runtime=runtime,\
+            sim_time=runtime,\
+            dt = dt,\
+            **spikes_dict)
         sim.end()
 
     def simulate(self):
-    """A wrapper around sim.run to do reset between presentations"""
+        """A wrapper around sim.run to do reset between presentations"""
         def reset_membrane_voltage():        
             for population in populations[1:]:
                 population.set_initial_value(variable="v", value=0)
@@ -165,8 +171,7 @@ class serialised_snn (object)
         #restore sim from file
         self.load_model()
         
-        #set variables recording
-        self.record_output()
+        #set variables w:@:Elf.record_output()
         
         self.simulate()
 
@@ -177,16 +182,19 @@ class serialised_snn (object)
 
     def get_results(self):
         #check for result dir and results files
-        #if they're there, run OutputDataProcessor on them
-        self.results = list of OutputDataProcessors
+        if os.path.isdir(self.result_dir) and len(os.listdir(self.result_dir))>0:
+            pass
         else:
             self.run()
-            self.results = #loop over the files
-
+        for filename in os.listdir(self.result_dir):
+             print(filename)
+             self.results.append(OutputDataProcessor(self.result_dir+'/'+filename))
+    
     def get_total_accuracy(self):
+        import pdb; pdb.set_trace()
         self.total_accuracy = np.mean([proc.get_accuracy for proc in self.results])
         
-    def main(self)
+    def main(self):
         self.get_results()
         self.get_total_accuracy()
         print(self.total_accuracy)
@@ -194,3 +202,5 @@ class serialised_snn (object)
 if __name__ == "__main__":
     import mnist_argparser
     args = mnist_argparser.main()
+    this = serialised_snn(args)
+    this.main()
