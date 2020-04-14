@@ -17,7 +17,8 @@ class OutputDataProcessor():
         self.t_stim = self.data['t_stim']
         self.runtime = int(self.data['runtime'])
         self.N_layer = int(self.data['N_layer'])
-        self.dt = self.data['dt']
+        #TODO fix for the case that self.data doesn't have dt
+        self.dt = self.data['dt'] or None
         self.neo_object = self.data['neo_spikes_dict']
         self.delay = self.get_delay()
         self.input_layer_name = self.layer_names[0]
