@@ -11,6 +11,7 @@ DEFAULT_T_STIM = 200  # ms
 DEFAULT_TESTING_EXAMPLES = 10000
 DEFAULT_CHUNK_SIZE = 100
 DEFAULT_NUMBER_OF_THREADS = 1
+DEFAULT_TIME_SCALE_FACTOR = 100
 
 parser = argparse.ArgumentParser(
     description='converted-MNIST argparser',
@@ -88,6 +89,9 @@ parser.add_argument('--number_of_threads', type=int,
                     help ='the number of threads to run in parallel',
                     default = DEFAULT_NUMBER_OF_THREADS)
 
+parser.add_argument('--time_scale_factor', type=float,
+                    help='the slowdown factor for the simulation',
+                    default=DEFAULT_TIME_SCALE_FACTOR)
 def main():
     return parser.parse_args()
 
