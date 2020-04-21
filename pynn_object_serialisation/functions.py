@@ -7,6 +7,7 @@ from spynnaker8.extra_models import SpikeSourcePoissonVariable
 from spynnaker8 import SpikeSourceArray, SpikeSourcePoisson
 from pprint import pprint as pp
 from colorama import Fore, Style, init as color_init
+import scipy
 
 DEFAULT_RECEPTOR_TYPES = ["excitatory", "inhibitory"]
 
@@ -353,3 +354,113 @@ def set_i_offsets(populations, new_runtime, old_runtime=1000):
             population.set(i_offset=get_rescaled_biases(i_offset, new_runtime))
         except Exception:
             pass
+
+def extract_parameters(filename, output_dir):
+    """Takes parameters from the serialised model and outputs a more human-readable directory structure.
+    """
+    import os
+    
+    #Grab the files
+    
+    # Objects and parameters
+    projections = []
+    populations = []
+
+    no_neurons = {}
+    total_no_neurons = 0
+    
+    # Load the data from disk
+    with open(filename + ".json", "r") as read_file:
+        json_data = json.load(read_file)
+    # Load connectivity data from disk
+    connectivity_data = np.load(filename + ".npz", allow_pickle=True)
+    # the number of populations to be reconstructed is either passed in
+    # (first_n_layers) or the total number of available populations
+    no_pops = len(json_data['populations'].keys())
+    no_proj = len(json_data['projections'].keys())
+
+    if not os.path.exists(output_dir):
+        os.mkdir(output_dir)
+    os.chdir(output_dir)
+
+    #Loop over layers
+    for pop_no in range(no_pops):
+        pop_info = json_data['populations'][str(pop_no)]
+        p_id = pop_info['id']
+        pop_cellclass = pydoc.locate(pop_info['cellclass'])
+        folderName = output_dir + '/' + pop_info['label']
+        no_neurons[pop_info['label']] = pop_info['n_neurons']
+        total_no_neurons += pop_info['n_neurons']
+        
+        if not os.path.exists(folderName):
+            os.mkdir(folderName)
+        os.chdir(folderName)
+        
+        print("Found pop {:35}".format(pop_info['label']), "containing",
+              format(pop_info['n_neurons'], ","), "neurons")
+        #Generate txt file that defines population (number of neurons, neuron model etc.)
+        f= open("Population_description.txt","w+")
+        for key in pop_info.keys():
+            f.write(str(key) + " : " + str(pop_info[key]) +'\n')
+        
+        #Make a directory for inhibitory and excitatory projections
+        if not os.path.exists("exc_projections"):
+            os.mkdir("exc_projections")
+    
+    
+        if not os.path.exists("inh_projections"):
+            os.mkdir("inh_projections")
+    
+    os.chdir(output_dir)
+    
+    for proj_no in range(no_proj):
+        # temporary utility variable
+        proj_info = json_data['projections'][str(proj_no)]
+        receptor_type = DEFAULT_RECEPTOR_TYPES[proj_info['receptor_type']]
+        _type = "_exc" if receptor_type == "excitatory" else "_inh"
+        conn_label = proj_info['pre_label'] + "_to_" + proj_info['post_label'] + _type
+        if proj_info['post_label'] not in no_neurons.keys():
+            print("Aborting the creation of proj", conn_label)
+            continue
+        print("Outputing {}".format(conn_label)) 
+        #Go to the correct directory
+        os.chdir(proj_info['post_label'])
+        if _type == "_exc":
+            os.chdir("exc_projections")
+        elif _type == "_inh":
+            os.chdir("inh_projections")
+        else:
+            print("How did you manage to get a receptor type that isn't exc or inh?")
+        
+        #Convert from_list to matrix
+        weight_matrix = convert_from_list_to_matrix(connectivity_data[str(proj_info['id'])])
+        #Write a csv
+        scipy.sparse.save_npz("connections" + _type, weight_matrix)
+        #Leave
+        os.chdir(output_dir)
+
+    connectivity_data.close()
+    #Put connectivity .npz in these directories
+
+    #Is there some way to spot convolution? Probably not
+    #Actually, could you use something akin to dictionary coding:
+    #For every pre weight assign a letter to a (relative_pre_neuron_index, weight) pair
+    #This should be repeated
+    #Sounds like a lot of work
+
+def convert_from_list_to_matrix(from_list):
+    """Converts a from_list connector to an ANN-like connectivity matrix.
+    """
+    from scipy import sparse
+    #from_list (pre_index, post_index, weight, delay)
+    from_list = np.array(from_list)
+    mat_coo = sparse.coo_matrix((from_list[:,2], (from_list[:,0].astype(int), from_list[:,1].astype(int))))
+    return mat_coo
+
+def main():
+    extract_parameters("/mnt/snntoolbox/pynn_object_serialisation/pynn_object_serialisation/experiments/isotope_testing/isotope_model_dense_normalised_input_production_serialised",\
+        "/mnt/snntoolbox/pynn_object_serialisation/pynn_object_serialisation/experiments/isotope_testing/test_out_dir")
+
+if __name__ == "__main__":
+   main()
+
