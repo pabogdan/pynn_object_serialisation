@@ -28,7 +28,8 @@ class serialised_snn:
         self.testing_examples = args.testing_examples
         self.parallel_processes = args.number_of_threads
         self.t_stim = args.t_stim
-        self.dataset = self.load_dataset()
+        self.runtime = self.t_stim*self.testing_examples
+        self.load_dataset()
         self.result_dir = args.result_dir
         self.base_filename_results = args.result_filename
         self.input_params = {}
@@ -36,6 +37,7 @@ class serialised_snn:
         self.start_index = False
         self.time_scale_factor = args.time_scale_factor
         self.results = []
+        self.N_layer = self.x_test.shape[1] # number of neurons in input population
 
     def in_parallel(self, func):
         
@@ -69,20 +71,20 @@ class serialised_snn:
         self.generate_VRPSS()
         replace = None
   
-        populations, projections, custom_params = restore_simulator_from_file(
+        self.populations, self.projections, self.custom_params = restore_simulator_from_file(
         sim, self.model_path,
         input_type='vrpss',
         vrpss_cellparams=self.input_params,
         replace_params=replace,
         time_scale_factor=args.time_scale_factor)
-        dt = sim.get_time_step()
+        self.dt = sim.get_time_step()
+        old_runtime = self.custom_params['runtime'] if 'runtime' in self.custom_params else None
         min_delay = sim.get_min_delay()
         max_delay = sim.get_max_delay()
         sim.set_number_of_neurons_per_core(SpikeSourcePoissonVariable, 16)
         sim.set_number_of_neurons_per_core(sim.SpikeSourcePoisson, 16)
         sim.set_number_of_neurons_per_core(sim.IF_curr_exp, 64)
-        old_runtime = custom_params['runtime']
-        set_i_offsets(populations, runtime, old_runtime=old_runtime)
+        set_i_offsets(self.populations, self.runtime, old_runtime=old_runtime)
     
     def load_dataset(self):
         """ Loads in mnist dataset """
@@ -95,16 +97,13 @@ class serialised_snn:
 
     def generate_VRPSS(self):
         """Generates variable rate poisson spike source"""
-        
-        N_layer = self.x_test.shape[1] # number of neurons in input population
-        testing_examples = args.chunk_size
-        runtime = testing_examples * self.t_stim
-        number_of_slots = int(runtime / t_stim)
-        range_of_slots = np.arange(number_of_slots)
-        starts = np.ones((N_layer, number_of_slots)) * (range_of_slots * t_stim)
-        durations = np.ones((N_layer, number_of_slots)) * t_stim
+        #TODO fix for parallelisation
+        runtime = self.testing_examples * self.t_stim
+        range_of_slots = np.arange(self.testing_examples)
+        starts = np.ones((self.N_layer, self.testing_examples)) * (range_of_slots * self.t_stim)
+        durations = np.ones((self.N_layer, self.testing_examples)) * self.t_stim
 
-        rates = x_test[start_index:start_index+args.chunk_size, :].T
+        rates = self.x_test[self.start_index:self.start_index+self.testing_examples, :].T
 
         # scaling rates
         _0_to_1_rates = rates / float(np.max(rates))
@@ -117,45 +116,46 @@ class serialised_snn:
         }
 
     def set_record_output(self):
-        output_v = []        
-        spikes_dict = {}
-        neo_spikes_dict = {}
+        self.output_v = []        
+        self.spikes_dict = {}
+        self.neo_spikes_dict = {}
         
-        for pop in populations[:]:
+        for pop in self.populations[:]:
             pop.record("spikes")
         if self.record_v:
-            populations[-1].record("v")
+            self.populations[-1].record("v")
 
     def get_output(self):
         """Gets the desired outputs from SpiNNaker at end of sim and saves it"""
 
-        for pop in populations[:]:
-            spikes_dict[pop.label] = pop.spinnaker_get_data('spikes')
+        for pop in self.populations[:]:
+            self.spikes_dict[pop.label] = pop.spinnaker_get_data('spikes')
         if args.record_v:
-            output_v = populations[-1].spinnaker_get_data('v')
+            self.output_v = self.populations[-1].spinnaker_get_data('v')
 
         if self.start_index:
             filename = self.base_filename_results + '_' + self.start_index
         else:
-            import pylab
+            from datetime import datetime
+            now = datetime.now()
             filename = self.base_filename_results + "_" + now.strftime("_%H%M%S_%d%m%Y")
 
         np.savez_compressed(os.path.join(self.result_dir, filename),\
-            output_v=output_v,\
-            neo_spikes_dict=neo_spikes_dict,\
-            y_test=y_test,\
-            N_layer=N_layer,\
-            t_stim=t_stim,\
-            runtime=runtime,\
-            sim_time=runtime,\
-            dt = dt,\
-            **spikes_dict)
+            output_v=self.output_v,\
+            neo_spikes_dict=self.neo_spikes_dict,\
+            y_test=self.y_test,\
+            N_layer=self.N_layer,\
+            t_stim=self.t_stim,\
+            runtime=self.runtime,\
+            sim_time=self.runtime,\
+            dt = self.dt,\
+            **self.spikes_dict)
         sim.end()
 
     def simulate(self):
         """A wrapper around sim.run to do reset between presentations"""
         def reset_membrane_voltage():        
-            for population in populations[1:]:
+            for population in self.populations[1:]:
                 population.set_initial_value(variable="v", value=0)
         
         for i in range (self.testing_examples):
@@ -171,7 +171,8 @@ class serialised_snn:
         #restore sim from file
         self.load_model()
         
-        #set variables w:@:Elf.record_output()
+        #set variables 
+        self.set_record_output()
         
         self.simulate()
 
@@ -182,7 +183,7 @@ class serialised_snn:
 
     def get_results(self):
         #check for result dir and results files
-        if os.path.isdir(self.result_dir) and len(os.listdir(self.result_dir))>0:
+        if os.path.isdir(self.result_dir) and len(os.listdir(self.result_dir))>0 and not args.force_resim:
             pass
         else:
             self.run()
@@ -192,7 +193,7 @@ class serialised_snn:
     
     def get_total_accuracy(self):
         import pdb; pdb.set_trace()
-        self.total_accuracy = np.mean([proc.get_accuracy for proc in self.results])
+        self.total_accuracy = np.mean([proc.get_accuracy() for proc in self.results])
         
     def main(self):
         self.get_results()
