@@ -17,8 +17,7 @@ class OutputDataProcessor():
         self.t_stim = self.data['t_stim']
         self.runtime = int(self.data['runtime'])
         self.N_layer = int(self.data['N_layer'])
-        #TODO fix for the case that self.data doesn't have dt
-        self.dt = self.data['dt'] or None
+        self.set_dt()
         self.neo_object = self.data['neo_spikes_dict']
         self.delay = self.get_delay()
         self.input_layer_name = self.layer_names[0]
@@ -38,6 +37,12 @@ class OutputDataProcessor():
             '/mnt/snntoolbox/snn_toolbox_private/examples/models/05-mobilenet_dwarf_v1/label_names.npz')
         self.label_names = labels['arr_0']
         labels.close()
+    
+    def set_dt(self):
+        try:
+            self.dt = self.data['dt']
+        except:
+            self.dt = 0.1
 
     def convert_output_to_index(self, data):
         return np.argmax(data, axis=1)
@@ -87,7 +92,6 @@ class OutputDataProcessor():
 
     def get_delay(self):
         #Cannnot currently calculate model with delays other than 1 ms between layers
-
         return (len(self.layer_names) - 1) * self.dt
 
     def get_bounds(self, bin_number):
