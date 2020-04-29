@@ -6,6 +6,7 @@ epochs = 20
 DEFAULT_MODEL_DIR = 'models/'
 DEFAULT_RESULT_DIR = 'results/'
 
+DEFAULT_RESULT_FILENAME = "results"
 DEFAULT_RATE_SCALING = 1000  # Hz
 DEFAULT_T_STIM = 200  # ms
 DEFAULT_TESTING_EXAMPLES = 10000
@@ -20,7 +21,7 @@ parser = argparse.ArgumentParser(
 parser.add_argument('model', type=str,
                     help='network architecture / model to train and test')
 
-parser.add_argument('--result_filename', type=str,
+parser.add_argument('--result_filename', type=str, default=DEFAULT_RESULT_FILENAME,
                     help='filename for results')
 
 parser.add_argument('--non_categorical', dest="non_categorical",
@@ -92,6 +93,8 @@ parser.add_argument('--number_of_threads', type=int,
 parser.add_argument('--time_scale_factor', type=float,
                     help='the slowdown factor for the simulation',
                     default=DEFAULT_TIME_SCALE_FACTOR)
+
+
 def main():
     return parser.parse_args()
 
