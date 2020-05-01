@@ -94,6 +94,9 @@ parser.add_argument('--time_scale_factor', type=float,
                     help='the slowdown factor for the simulation',
                     default=DEFAULT_TIME_SCALE_FACTOR)
 
+parser.add_argument('--force_resim', type=bool,
+                    help='should present results be ignored',
+                    default=False)
 
 def main():
     return parser.parse_args()
