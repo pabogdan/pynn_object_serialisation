@@ -6,85 +6,34 @@ try:
 except Exception:
     import pyNN.spiNNaker as sim
 from pynn_object_serialisation.functions import \
-    restore_simulator_from_file, get_rescaled_i_offset, set_i_offsets, get_input_size
-from spynnaker8.extra_models import SpikeSourcePoissonVariable
+    restore_simulator_from_file, get_rescaled_i_offset, \
+    set_i_offsets, get_input_size
+import pylab as plt
 import numpy as np
 import os
+import traceback
 import sys
-# Making the generator for the images
-from keras_rewiring.utilities.imagenet_utils import ImagenetDataGenerator
+from pynn_object_serialisation.experiments.mobilenet_testing.utils import \
+    retrieve_git_commit, compute_input_spikes
+# Record SCRIPT start time (wall clock)
+start_time = plt.datetime.datetime.now()
 
 # Checking directory structure exists
 if not os.path.isdir(args.result_dir) and not os.path.exists(args.result_dir):
     os.mkdir(args.result_dir)
 
 N_layer = get_input_size(args.model)
-t_stim = args.t_stim
 
-image_length = int(np.sqrt((N_layer / 3)))
-image_size = (image_length, image_length, 3)
+input_params, y_test = compute_input_spikes(
+    no_tests=args.testing_examples,
+    data_path=args.data_dir,
+    input_size=N_layer,
+    t_stim=args.t_stim,
+    rate_scaling=args.rate_scaling,
+)
 
-data_path = args.data_dir
+runtime = args.testing_examples * args.t_stim
 
-print("=" * 80)
-print("Experiment mini-report")
-print("-" * 80)
-print("Number of testing examples to use:", args.testing_examples)
-
-generator = ImagenetDataGenerator('val', args.testing_examples, data_path, image_size)
-gen = generator()
-x_test, y_test = gen.__next__()
-# reshape input to flatten data
-# x_train = x_train.reshape(x_train.shape[0], np.prod(x_train.shape[1:]))
-x_test = x_test.reshape(x_test.shape[0], np.prod(x_test.shape[1:]))
-
-runtime = args.testing_examples * t_stim
-number_of_slots = int(runtime / t_stim)
-range_of_slots = np.arange(number_of_slots)
-starts = np.ones((N_layer, number_of_slots)) * (range_of_slots * t_stim)
-durations = np.ones((N_layer, number_of_slots)) * t_stim
-rates = x_test[:args.testing_examples].T
-
-# scaling rates
-print("=" * 80)
-print("Scaling rates...")
-min_rates = np.min(rates)
-max_rates = np.max(rates)
-_0_to_1_rates = rates - min_rates
-print("rates - min_rates min", np.min(_0_to_1_rates))
-print("rates - min_rates max", np.max(_0_to_1_rates))
-_0_to_1_rates = _0_to_1_rates / float(np.max(_0_to_1_rates))
-print("_0_to_1_rates min", np.min(_0_to_1_rates))
-print("_0_to_1_rates max", np.max(_0_to_1_rates))
-rates = _0_to_1_rates * args.rate_scaling
-
-input_params = {
-    "rates": rates,
-    "durations": durations,
-    "starts": starts
-}
-print("Finished scaling rates...")
-print("=" * 80)
-# Let's do some reporting about here
-print("Going to put in", args.testing_examples, "images")
-print("The shape of the rates array is ", rates.shape)
-print("This shape is supposed to match that of durations ", durations.shape)
-print("... and starts ", starts.shape)
-
-assert (rates.shape == durations.shape)
-assert (rates.shape == starts.shape)
-assert (rates.shape[1] == args.testing_examples)
-
-print("Input image size is expected to be ", image_size)
-print("... i.e. ", np.prod(image_size), "pixels")
-print("Mobilenet generally expects the image size to be ", (224, 224, 3))
-
-print("Min rate", np.min(rates))
-print("Max rate", np.max(rates))
-print("Mean rate", np.mean(rates))
-print("=" * 80)
-
-sys.stdout.flush()
 # produce parameter replacement dict
 replace = {
     "tau_syn_E": 0.2,
@@ -110,12 +59,53 @@ if args.record_v:
     populations[-1].record("v")
 spikes_dict = {}
 neo_spikes_dict = {}
-sim.run(runtime)
-for pop in populations[:]:
+
+# Record simulation start time (wall clock)
+sim_start_time = plt.datetime.datetime.now()
+current_error = None
+final_connectivity = {}
+# Run the simulation
+try:
+    sim.run(runtime)
+except Exception as e:
+    print("An exception occurred during execution!")
+    traceback.print_exc()
+    current_error = e
+# Compute time taken to reach this point
+end_time = plt.datetime.datetime.now()
+total_time = end_time - start_time
+sim_total_time = end_time - sim_start_time
+
+pop_labels = [pop.label for pop in populations]
+
+
+for pop in populations:
     spikes_dict[pop.label] = pop.spinnaker_get_data('spikes')
 # the following takes more time than spinnaker_get_data
-# for pop in populations[:]:
-#     neo_spikes_dict[pop.label] = pop.get_data('spikes')
+for pop in populations:
+    # neo_spikes_dict[pop.label] = pop.get_data('spikes')
+    neo_spikes_dict[pop.label] = []
+
+try:
+    for proj in projections:
+        try:
+            final_connectivity[proj.label] = \
+                np.array(proj.get(('weight', 'delay'),
+                               format="list")._get_data_items())
+        except AttributeError as ae:
+            print("Careful! Something happened when retrieving the "
+                  "connectivity:", ae,
+                  "\nRetrying using standard PyNN syntax...")
+            final_connectivity[proj.label] = \
+                np.array(proj.get(('weight', 'delay'), format="list"))
+        except TypeError as te:
+            print("Connectivity is None (", te,
+                  ") for connection", proj.label)
+            print("Connectivity as empty array.")
+            final_connectivity[proj.label] = np.array([])
+except:
+    traceback.print_exc()
+    print("Couldn't retrieve connectivity.")
 if args.record_v:
     output_v = populations[-1].spinnaker_get_data('v')
 # save results
@@ -131,14 +121,25 @@ else:
 
         now = pylab.datetime.datetime.now()
         results_filename += "_" + now.strftime("_%H%M%S_%d%m%Y")
+# Retrieve simulation parameters for provenance tracking and debugging purposes
+sim_params = {
+    "argparser": vars(args),
+    "git_hash": retrieve_git_commit(),
+    "run_end_time": end_time.strftime("%H:%M:%S_%d/%m/%Y"),
+    "wall_clock_script_run_time": str(total_time),
+    "wall_clock_sim_run_time": str(sim_total_time),
+}
 
+# TODO Retrieve original connectivity and JSON and store here.
 np.savez_compressed(os.path.join(args.result_dir, results_filename),
                     output_v=output_v,
                     neo_spikes_dict=neo_spikes_dict,
-                    y_test=y_test,
-                    N_layer=N_layer,
-                    t_stim=t_stim,
-                    runtime=runtime,
+                    all_spikes=spikes_dict,
+                    y_test=input_params['y_test'],
+                    input_params=input_params,
+                    input_size=N_layer,
                     sim_time=runtime,
+                    sim_params=sim_params,
+                    final_connectivity=final_connectivity,
                     **spikes_dict)
 sim.end()

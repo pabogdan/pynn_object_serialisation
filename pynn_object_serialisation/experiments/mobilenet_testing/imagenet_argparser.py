@@ -11,7 +11,9 @@ DEFAULT_NO_EXAMPLES = 100
 
 DEFAULT_FIRST_N_LAYERS = None
 
-DEFAULT_TIMESCALE = 100
+DEFAULT_TIMESCALE = 1000
+
+DEFAULT_DT = 0.1
 
 DEFAULT_NUMBER_OF_BOARDS = None
 
@@ -49,6 +51,9 @@ parser.add_argument('--record_v',
                     help='record voltage for output neurons',
                     action="store_true")
 
+parser.add_argument('--dt', type=float,
+                    help='simulation timestep dt',
+                    default=DEFAULT_DT)
 
 parser.add_argument('--test_with_pss',
                     help='Test using only the Poisson Spike Source '
