@@ -4,10 +4,16 @@ DEFAULT_MODEL_DIR = 'models/'
 DEFAULT_RESULT_DIR = 'results/'
 DEFAULT_DATA_DIR = '/ILSVRC/'
 
-DEFAULT_RATE_SCALING = 1000  # Hz
+DEFAULT_RATE_SCALING = 100  # Hz
 DEFAULT_T_STIM = 200  # ms
 
 DEFAULT_NO_EXAMPLES = 100
+
+DEFAULT_FIRST_N_LAYERS = None
+
+DEFAULT_TIMESCALE = 100
+
+DEFAULT_NUMBER_OF_BOARDS = None
 
 parser = argparse.ArgumentParser(
     description='converted-cifar argparser',
@@ -26,6 +32,18 @@ parser.add_argument('--non_categorical', dest="non_categorical",
 parser.add_argument('--testing_examples', type=int,
                     help='number of testing examples to show',
                     default=DEFAULT_NO_EXAMPLES)
+
+parser.add_argument('--timescale', type=int,
+                    help='timescale factor for the simulation',
+                    default=DEFAULT_TIMESCALE)
+
+parser.add_argument('--first_n_layers', type=int,
+                    help='number of layers to reconstruct',
+                    default=DEFAULT_FIRST_N_LAYERS)
+
+parser.add_argument('--number_of_boards', type=int,
+                    help='number of boards to use by the simulation',
+                    default=DEFAULT_NUMBER_OF_BOARDS)
 
 parser.add_argument('--record_v',
                     help='record voltage for output neurons',
