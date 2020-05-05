@@ -404,7 +404,7 @@ def serialisation_summary(filename):
                 print("Projections from {} to {}".format(json_data['projections'][projection]['pre_label'], json_data['projections'][projection]['post_label']))
         print ('\n')
     
-def extract_parameters(filename, output_dir):
+def extract_parameters(filename, output_dir, output_type="npz"):
     """Takes parameters from the serialised model and outputs a more human-readable directory structure.
     """
     import os
@@ -481,10 +481,17 @@ def extract_parameters(filename, output_dir):
         else:
             print("How did you manage to get a receptor type that isn't exc or inh?")
         
+
         #Convert from_list to matrix
         weight_matrix = convert_from_list_to_matrix(connectivity_data[str(proj_info['id'])])
-        #Write a csv
-        scipy.sparse.save_npz("connections" + _type, weight_matrix)
+        if output_type == "npz":
+            #Write a npz
+            scipy.sparse.save_npz("connections" + _type, weight_matrix)
+        if output_type == "csv":
+            dense_matrix = weight_matrix.todense()
+            np.savetxt("connections" + _type +".csv", dense_matrix, delimiter=",")  
+        else:
+            print("Did not understand output type.")
         #Leave
         os.chdir(output_dir)
 
@@ -507,7 +514,7 @@ def convert_from_list_to_matrix(from_list):
     return mat_coo
 
 def main():
-
+    pass
 if __name__ == "__main__":
    main()
 

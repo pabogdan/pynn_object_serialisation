@@ -12,12 +12,15 @@ parser.add_argument('model', type=str,
 parser.add_argument('output_dir', type=str,
             help='the root directory for the output')
 
+parser.add_argument('output_type', type=str,
+            help='the root directory for the output',
+            default="csv")
 args = parser.parse_args()
 
 
 #runs the parameter extractor on them
 try:
-    extract_parameters(args.model, args.output_dir)
+    extract_parameters(args.model, args.output_dir, args.output_type)
 except Exception as e:
     print("Something went wrong.\n")
     print(e)
