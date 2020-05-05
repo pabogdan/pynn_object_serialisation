@@ -1,13 +1,14 @@
 import json
 import pynn_object_serialisation.serialisation_utils as utils
 from pynn_object_serialisation.functions import DEFAULT_RECEPTOR_TYPES
-from pynn_object_serialisation.experiments.mobilenet_testing.analysis_common import *
+from pynn_object_serialisation.experiments.analysis_common import *
 
 
 def network_statistics(filename, fig_folder, dark_background=False):
     if dark_background:
         plt.style.use('dark_background')
     print("=" * 80)
+    filename = strip_file_extension(filename)
     print("LOOKING AT", filename)
     print("-" * 80)
     # Checking fig directory structure exists
@@ -107,10 +108,16 @@ def network_statistics(filename, fig_folder, dark_background=False):
     for proj_k in projection_order:
         # Report range of source, target, weight, delay
         _conn = all_connections[proj_k]
-        sources = _conn[:, 0]
-        targets = _conn[:, 1]
-        weights = _conn[:, 2]
-        delays = _conn[:, 3]
+        if _conn.size == 0:
+            sources = np.array([-1])
+            targets = np.array([-1])
+            weights = np.array([np.nan])
+            delays = np.array([np.nan])
+        else:
+            sources = _conn[:, 0]
+            targets = _conn[:, 1]
+            weights = _conn[:, 2]
+            delays = _conn[:, 3]
 
         print(("Proj {:60} has "
                "source [{:8d}, {:8d}], "
@@ -118,10 +125,10 @@ def network_statistics(filename, fig_folder, dark_background=False):
                "weight [{:8.4f}, {:8.4f}], "
                "delay [{:4}, {:4}]").format(
             proj_k,
-            int(sources.min()), int(sources.max()),
-            int(targets.min()), int(targets.max()),
-            weights.min(), weights.max(),
-            delays.min(), delays.max()
+            int(np.nanmin(sources)), int(np.nanmax(sources)),
+            int(np.nanmin(targets)), int(np.nanmax(targets)),
+            np.nanmin(weights), np.nanmax(weights),
+            np.nanmin(delays), np.nanmax(delays)
         ))
         # Report mean, mode and std of weight
         print("\t weights stats: mean {:8.4f}, "
@@ -133,17 +140,20 @@ def network_statistics(filename, fig_folder, dark_background=False):
     print("Plots")
     print("-" * 80)
     # TODO add plots
+    non_input_all_neurons = all_neurons
+    del non_input_all_neurons['InputLayer']
     plot_weight_barplot(all_neurons, conn_py_post,
                         layer_order=layer_order,
                         current_fig_folder=current_fig_folder)
 
 
 if __name__ == "__main__":
-    from pynn_object_serialisation.experiments. \
-        mobilenet_testing. \
-        analysis_argparser import *
+    from pynn_object_serialisation.experiments.analysis_argparser import *
 
     if analysis_args.input and len(analysis_args.input) > 0:
         for in_file in analysis_args.input:
+            # try:
             network_statistics(in_file, analysis_args.figures_dir,
                                dark_background=analysis_args.dark_background)
+            # except:
+            #     traceback.print_exc()

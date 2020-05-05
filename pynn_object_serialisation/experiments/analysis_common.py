@@ -17,8 +17,6 @@ import neo
 from datetime import datetime
 import warnings
 import ntpath
-from spinncer.utilities.constants import CONNECTIVITY_MAP, CELL_PARAMS
-from spinncer.utilities.neo_converter import convert_spikes
 from colorama import Fore, Style, init as color_init
 import pandas as pd
 import string
@@ -93,6 +91,14 @@ def save_figure(plt, name, extensions=(".png",), **kwargs):
         plt.savefig(name + ext, **kwargs)
 
 
+def strip_file_extension(name):
+    split_by_dot = name.split(".")
+    if split_by_dot[-1] in ["npz", "json", "h5"]:
+        return ".".join(split_by_dot[:-1])
+    else:
+        return name
+
+
 def plot_weight_barplot(all_neurons, conn_py_post, layer_order=None,
                         current_fig_folder="./"):
     """
@@ -100,7 +106,7 @@ def plot_weight_barplot(all_neurons, conn_py_post, layer_order=None,
     """
     no_pops = len(all_neurons.keys())
     layer_order = layer_order[1:] or list(all_neurons.keys())
-    fig, axes = plt.subplots(no_pops, 1, figsize=(8, 3 * no_pops))
+    fig, axes = plt.subplots(no_pops, 1, figsize=(8, 3 * no_pops), sharex=True)
     for (index, ax), curr_layer in zip(np.ndenumerate(axes), layer_order):
         i = index[0]
         all_weights_for_post = conn_py_post[curr_layer]

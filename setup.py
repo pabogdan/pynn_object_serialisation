@@ -21,7 +21,8 @@ setup(
                       "tensorflow",
                       "argparse",
                       "pillow",
-                      "colorama"],
+                      "colorama",
+                      "brian2"],
     classifiers=[
         "Development Status :: 3 - Alpha",
 
