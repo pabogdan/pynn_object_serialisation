@@ -124,16 +124,15 @@ def intercept_simulator(sim, output_filename=None, cellparams=None,
 
 
 def restore_simulator_from_file(sim, filename, prune_level=1.,
-                                input_type = None,
+                                input_type=None,
                                 vrpss_cellparams=None,
-                                ssa_cellparams = None,
-                                replace_params=None, 
+                                ssa_cellparams=None,
+                                replace_params=None,
                                 n_boards_required=None,
                                 time_scale_factor=None):
-
     replace_params = replace_params or {}
 
-    if not input_type is "vrpss" and vrpss_cellparams:
+    if input_type != "vrpss" and vrpss_cellparams:
         raise AttributeError("Undefined configuration. You are passing in "
                              "parameters for a Variable Rate Poisson Spike "
                              "Source, but you are not setting "
@@ -174,8 +173,9 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
         pop_info = json_data['populations'][str(pop_no)]
         p_id = pop_info['id']
         pop_cellclass = pydoc.locate(pop_info['cellclass'])
-        print("Reconstructing pop", pop_info['label'], "containing",  pop_info['n_neurons'], " ", pop_cellclass, " ", "neurons")
-        if input_type is "vrpss" and (
+        print("Reconstructing pop", pop_info['label'], "containing", pop_info['n_neurons'], " ", pop_cellclass, " ",
+              "neurons")
+        if input_type == "vrpss" and (
                 pop_cellclass is SpikeSourcePoissonVariable or
                 pop_cellclass is SpikeSourceArray or
                 pop_cellclass is SpikeSourcePoisson):
@@ -186,17 +186,17 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
 
             pop_cellclass = SpikeSourcePoissonVariable
             pop_cellparams = vrpss_cellparams
-        elif input_type is "ssa" and (
-            pop_cellclass is SpikeSourcePoissonVariable or
-            pop_cellclass is SpikeSourceArray or
-            pop_cellclass is SpikeSourcePoisson):
-            
+        elif input_type == "ssa" and (
+                pop_cellclass is SpikeSourcePoissonVariable or
+                pop_cellclass is SpikeSourceArray or
+                pop_cellclass is SpikeSourcePoisson):
+
             print("--Going to use a SpikeSourceArray for this reconstruction ...")
             print("--SpikeSourceArray is set to have", pop_info['n_neurons'], "neurons")
             print("--and is labeled as ", pop_info['label'])
             pop_cellclass = SpikeSourceArray
             pop_cellparams = ssa_cellparams
-            
+
         elif pop_cellclass is SpikeSourcePoissonVariable:
             pop_cellparams = connectivity_data[pop_info['cellparams']].ravel()[0]
         else:
@@ -235,7 +235,7 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
         total_no_synapses += _conn.shape[0]
 
         post_n_neurons = json_data['populations'][str(proj_info['post_number'])]['n_neurons']
-        max_synapses_per_neuron = max(max_synapses_per_neuron, _conn.shape[0]/post_n_neurons)
+        max_synapses_per_neuron = max(max_synapses_per_neuron, _conn.shape[0] / post_n_neurons)
         # create the projection
         conn_label = proj_info['pre_label'] + "_to_" + proj_info['post_label']
         print("Reconstructing proj", conn_label)
@@ -337,46 +337,45 @@ def set_i_offsets(populations, new_runtime, old_runtime=1000):
             population.set(i_offset=get_rescaled_biases(i_offset, new_runtime))
         except Exception:
             pass
-    
+
+
 def serialisation_summary(filename):
     """ Gives a human-readable output for a serialised model
     """
     # Load the data from disk
     with open(filename + ".json", "r") as read_file:
         json_data = json.load(read_file)
-    
-    print("="*10 +"Summary" +"="*10)
-    
+
+    print("=" * 10 + "Summary" + "=" * 10)
+
     no_pops = len(json_data['populations'].keys())
     no_proj = len(json_data['projections'].keys())
-    
+
     print("Number of populations: {}".format(no_pops))
     print("Number of projections: {}".format(no_proj))
-    
+
     neuron_total = 0
-    
+
     for population in json_data['populations']:
         neuron_total += json_data['populations'][population]['n_neurons']
-    
-    
+
     print("Total number of neurons: {}".format(neuron_total))
     print("\n\n")
     for population in json_data['populations']:
-        print("="*10 +"Layer" +"="*10)
+        print("=" * 10 + "Layer" + "=" * 10)
         print("Layer label:{}".format(json_data['populations'][population]['label']))
         print("Number of neurons:{}".format(json_data['populations'][population]['n_neurons']))
         print("Neuron model:{}".format(json_data['populations'][population]['cellclass']))
-        print("="*10 +"Projections" +"="*10)
+        print("=" * 10 + "Projections" + "=" * 10)
         for projection in json_data['projections']:
             if json_data['projections'][projection]['pre_id'] == json_data['populations'][population]['id']:
-                #Check this is the right way round
+                # Check this is the right way round
                 type = "inhibitory" if bool(json_data['projections'][projection]['receptor_type']) else "excitatory"
                 print("Projection {}, ({})".format(projection, type))
-                print("Projections from {} to {}".format(json_data['projections'][projection]['pre_label'], json_data['projections'][projection]['post_label']))
-        print ('\n')
-    
+                print("Projections from {} to {}".format(json_data['projections'][projection]['pre_label'],
+                                                         json_data['projections'][projection]['post_label']))
+        print('\n')
+
+
 if __name__ == '__main__':
     serialisation_summary("experiments/mnist_testing/lenet_dense_IF_cond_exp_serialised")
-    
-    
-    
