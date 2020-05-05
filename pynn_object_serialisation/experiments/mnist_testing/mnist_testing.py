@@ -38,33 +38,9 @@ class serialised_snn:
         self.time_scale_factor = args.time_scale_factor
         self.results = []
         self.N_layer = self.x_test.shape[1] # number of neurons in input population
-
-    def in_parallel(self, func):
-        
-        def init_worker():
-            current = multiprocessing.current_process()
-            print('Started {}'.format(current))
-            if not os.path.exists('errorlog'):
-                os.makedirs('errorlog')
-            
-            f_name = "errorlog/" + current.name +"_stdout.txt"
-            g_name = "errorlog/" + current.name + "_stderror.txt"
-            f = open(f_name, 'w')
-            g = open(g_name, 'w')
-            #old_stdout = sys.stdout
-            #old_stderr = sys.stderr
-            sys.stdout = f
-            sys.stderr = g
-        
-        def inner(*args, **kwargs):
-            chunk_size = self.testing_examples // self.number_of_processes
-            #Make a pool
-            p = Pool(initializer=init_worker, processes=self.parallel_processes)
-            #Run the pool
-            p.starmap(func, zip(itertools.repeat(*args), itertools.repeat(**kwargs), list(range(0, self.testing_examples, chunk_size))))
-        
-        return inner
-
+        self.chunk_size = self.testing_examples // self.parallel_processes
+        #TODO fix for case when self.testing_examples%self.parallel_processes != 0
+ 
     def load_model(self):
         """Loads model from model path"""
         
@@ -97,13 +73,13 @@ class serialised_snn:
 
     def generate_VRPSS(self):
         """Generates variable rate poisson spike source"""
-        #TODO fix for parallelisation
-        runtime = self.testing_examples * self.t_stim
-        range_of_slots = np.arange(self.testing_examples)
-        starts = np.ones((self.N_layer, self.testing_examples)) * (range_of_slots * self.t_stim)
-        durations = np.ones((self.N_layer, self.testing_examples)) * self.t_stim
 
-        rates = self.x_test[self.start_index:self.start_index+self.testing_examples, :].T
+        runtime = self.chunk_size * self.t_stim
+        range_of_slots = np.arange(self.chunk_size)
+        starts = np.ones((self.N_layer, self.chunk_size)) * (range_of_slots * self.t_stim)
+        durations = np.ones((self.N_layer, self.chunk_size)) * self.t_stim
+
+        rates = self.x_test[self.start_index:self.start_index+self.chunk_size, :].T
 
         # scaling rates
         _0_to_1_rates = rates / float(np.max(rates))
@@ -159,11 +135,38 @@ class serialised_snn:
                 population.set_initial_value(variable="v", value=0)
         
         for i in range (self.testing_examples):
-            sim.run(self.t_stim)
+            sim.run(self.t_stim, start_index = self.start_index)
             reset_membrane_voltage()
 
+    def in_parallel(self, func):
+        """ Decorator to run function in parallel """
+        def init_worker():
+            current = multiprocessing.current_process()
+            print('Started {}'.format(current))
+            if not os.path.exists('errorlog'):
+                os.makedirs('errorlog')
+            
+            f_name = "errorlog/" + current.name +"_stdout.txt"
+            g_name = "errorlog/" + current.name + "_stderror.txt"
+            f = open(f_name, 'w')
+            g = open(g_name, 'w')
+            #old_stdout = sys.stdout
+            #old_stderr = sys.stderr
+            sys.stdout = f
+            sys.stderr = g
+ 
+        def inner(self):
+            #Make a pool
+            p = Pool(initializer=init_worker, processes=self.parallel_processes)
+            #Run the pool
+            p.starmap(func, zip(self, list(range(0, self.testing_examples, self.chunk_size))))
+            return
+ 
+        return inner
     
-    def run(self):
+    def run(self, start_index = 0):
+        
+        self.start_index = start_index
         #setup results directory
         if not os.path.isdir(self.result_dir) and not os.path.exists(self.result_dir):
             os.mkdir(self.result_dir)
@@ -181,10 +184,15 @@ class serialised_snn:
 
         sim.end() 
 
+    def parallel_run(self):
+        return self.in_parallel(self.run)()
+
     def get_results(self):
         #check for result dir and results files
-        if os.path.isdir(self.result_dir) and len(os.listdir(self.result_dir))>0 and not args.force_resim:
+        if os.path.isdir(self.result_dir) and len(os.listdir(self.result_dir))>0  and not args.force_resim:
             pass
+        elif self.parallel_processes >1:
+            self.parallel_run()
         else:
             self.run()
         for filename in os.listdir(self.result_dir):
