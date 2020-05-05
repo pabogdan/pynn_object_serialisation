@@ -1,0 +1,1 @@
+nohup python pre_run_analysis.py -i mnist_testing/networks/*.npz > mnist_pre_run_analysis.out 2>&1 &
