@@ -20,7 +20,9 @@ setup(
                       "matplotlib",
                       "tensorflow",
                       "argparse",
-                      "pillow"],
+                      "pillow",
+                      "colorama",
+                      "brian2"],
     classifiers=[
         "Development Status :: 3 - Alpha",
 
