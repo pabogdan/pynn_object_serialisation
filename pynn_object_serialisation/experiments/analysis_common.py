@@ -22,6 +22,7 @@ import pandas as pd
 import string
 from matplotlib.ticker import MultipleLocator
 
+
 mlib.use('Agg')
 warnings.filterwarnings("ignore", category=UserWarning)
 warnings.filterwarnings("ignore", category=RuntimeWarning)
@@ -119,12 +120,31 @@ def plot_weight_barplot(all_neurons, conn_py_post, layer_order=None,
                         edgecolor='k')
 
         ax.set_title(curr_layer)
-        # ax.set_xticks(np.unique(all_delays))
-        # ax.set_xlabel("{0:,}\n{1:2.2f}%".format(conns[i].shape[0], percentage_conn[i]))
-
         ax.set_ylabel("Count")
     plt.tight_layout()
     save_figure(plt, os.path.join(current_fig_folder, "weights_in_network"),
+                extensions=[".png",  ".pdf"])
+    plt.close(fig)
+
+def plot_hist(all_neurons, variable_by_post, variable_name,  layer_order=None,
+              current_fig_folder="./"):
+    """
+    Plot histogram of e.g.
+    """
+    layer_order = layer_order or list(all_neurons.keys())
+    no_pops = len(layer_order)
+    fig, axes = plt.subplots(no_pops, 1, figsize=(8, 3 * no_pops), sharex=True)
+    for (index, ax), curr_layer in zip(np.ndenumerate(axes), layer_order):
+        i = index[0]
+        curr_values = variable_by_post[curr_layer]
+
+        ax.hist(curr_values, bins=20, color=color_for_index(i, no_pops),
+                edgecolor='k')
+
+        ax.set_title(curr_layer)
+        ax.set_ylabel("Count")
+    plt.tight_layout()
+    save_figure(plt, os.path.join(current_fig_folder, variable_name),
                 extensions=[".png",  ".pdf"])
     plt.close(fig)
 
