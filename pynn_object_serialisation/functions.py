@@ -252,7 +252,8 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
         post_n_neurons = \
             json_data['populations'][str(proj_info['post_number'])]['n_neurons']
 
-        number_of_synapses = _conn.shape[0] max_synapses_per_neuron = max(max_synapses_per_neuron,
+        number_of_synapses = _conn.shape[0]
+        max_synapses_per_neuron = max(max_synapses_per_neuron,
                                       number_of_synapses/ post_n_neurons)
         # create the projection
         print("Reconstructing proj", conn_label)
