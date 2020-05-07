@@ -157,7 +157,6 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
     # setup
     setup_params = json_data['setup']
     # TODO move setup outside into whatever experiment is run
-    time_scale_factor = time_scale_factor or 1
     sim.setup(setup_params['machine_time_step'] / 1000.,
               setup_params['min_delay'],
               setup_params['max_delay'],
@@ -474,7 +473,7 @@ def extract_parameters(filename, output_dir, output_type="npz"):
         if proj_info['post_label'] not in no_neurons.keys():
             print("Aborting the creation of proj", conn_label)
             continue
-        print("Outputing {}".format(conn_label))
+        print("Outputting {}".format(conn_label))
         #Go to the correct directory
         os.chdir(proj_info['post_label'])
         if _type == "_exc":

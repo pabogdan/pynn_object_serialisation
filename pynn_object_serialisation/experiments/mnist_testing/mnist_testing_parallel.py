@@ -48,7 +48,6 @@ def run(args, start_index):
     x_test = x_test.reshape(x_test.shape[0], np.prod(x_test.shape[1:]))
 
     testing_examples = args.chunk_size
-    import pdb; pdb.set_trace()
     runtime = testing_examples * t_stim
     number_of_slots = int(runtime / t_stim)
     range_of_slots = np.arange(number_of_slots)
@@ -72,6 +71,7 @@ def run(args, start_index):
     populations, projections, custom_params = restore_simulator_from_file(
     sim, args.model,
     input_type='vrpss',
+    time_scale_factor=args.time_scale_factor,
     vrpss_cellparams=input_params,
     replace_params=replace)
     dt = sim.get_time_step()
