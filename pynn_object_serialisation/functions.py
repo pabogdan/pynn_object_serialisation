@@ -181,7 +181,7 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
         pop_cellclass = pydoc.locate(pop_info['cellclass'])
         print("Reconstructing pop {:35}".format(pop_info['label']), "containing",
               format(pop_info['n_neurons'], ","), "neurons")
-        if is_input_vrpss and (
+        if input_type == "vrpss" and (
                 pop_cellclass is SpikeSourcePoissonVariable or
                 pop_cellclass is SpikeSourceArray or
                 pop_cellclass is SpikeSourcePoisson):
