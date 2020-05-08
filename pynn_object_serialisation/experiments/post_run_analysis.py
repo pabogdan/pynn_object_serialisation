@@ -210,9 +210,10 @@ def post_run_analysis(filename, fig_folder, dark_background=False):
     for index, pop in enumerate(plot_order):
         curr_ax = axes[index]
         # spike raster
-        _times = all_spikes[pop][:, 1]
-        _times = _times[_times < 10000]
-        _ids = all_spikes[pop][:, 0]
+        curr_spikes = all_spikes[pop]
+        curr_filtered_spikes = curr_spikes[curr_spikes[:, 1] < 10000]
+        _times = curr_filtered_spikes[:, 1]
+        _ids = curr_filtered_spikes[:, 0]
         curr_ax.scatter(_times,
                         _ids,
                         color=viridis_cmap(index / (n_plots + 1)),
