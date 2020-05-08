@@ -2,6 +2,31 @@ import json
 import pynn_object_serialisation.serialisation_utils as utils
 from pynn_object_serialisation.functions import DEFAULT_RECEPTOR_TYPES
 from pynn_object_serialisation.experiments.analysis_common import *
+from sklearn.metrics import classification_report, confusion_matrix
+
+
+def what_network_thinks(spikes, t_stim, simtime, num_classes):
+    instaneous_counts = np.empty((num_classes, int(simtime / t_stim)))
+    for index, value in np.ndenumerate(instaneous_counts):
+        number_index, t_stim_index = index
+        spikes_for_curr_nid = spikes[spikes[:, 0].astype(int) == number_index][:, 1] * ms
+        instaneous_counts[number_index, t_stim_index] = np.count_nonzero(
+            np.logical_and(
+                spikes_for_curr_nid >= (t_stim_index * t_stim),
+                spikes_for_curr_nid < ((t_stim_index + 1) * t_stim)
+            )
+        )
+
+    argmax_result = np.empty(instaneous_counts.shape[1])
+    for i in range(argmax_result.shape[0]):
+        if np.all(instaneous_counts[:, i] == 0):
+            argmax_result[i] = -1
+        else:
+            ir_max = np.max(instaneous_counts[:, i])
+            argmax_result[i] = np.random.choice(np.flatnonzero(instaneous_counts[:, i] == ir_max))
+            # argmax_result[i] = np.argmax(instaneous_counts[:, i])
+
+    return argmax_result
 
 
 def post_run_analysis(filename, fig_folder, dark_background=False):
@@ -43,7 +68,19 @@ def post_run_analysis(filename, fig_folder, dark_background=False):
         init_connectivity = []
         traceback.print_exc()
     all_neurons = data['all_neurons'].ravel()[0]
+    num_classes = data['num_classes']
     sim_params = data['sim_params'].ravel()[0]
+    testing_examples = data['testing_examples']
+    no_testing_examples = data['no_testing_examples']
+    test_labels = data['y_test']
+    extra_params = data['extra_params'].ravel()[0]
+    t_stim = sim_params['argparser']['t_stim'] * ms
+    timestep = sim_params['argparser']['timestep'] * ms
+    simtime = data['simtime'] * ms
+    # Pre-compute conversions
+    time_to_bin_conversion = 1. / (timestep / ms)
+    no_timesteps = int(simtime / ms * time_to_bin_conversion)
+
     # Report useful parameters
     print("=" * 80)
     print("Simulation parameters")
@@ -57,7 +94,7 @@ def post_run_analysis(filename, fig_folder, dark_background=False):
           plt.datetime.datetime.now().strftime("%H:%M:%S on %d.%m.%Y"))
 
     # Compute plot order
-    plot_order = all_spikes.keys()
+    plot_order = list(all_spikes.keys())
     n_plots = float(len(plot_order))
     # Report number of neurons
     print("=" * 80)
@@ -65,6 +102,7 @@ def post_run_analysis(filename, fig_folder, dark_background=False):
     print("-" * 80)
     for pop in plot_order:
         print("\t{:30} -> {:10} neurons".format(pop, all_neurons[pop]))
+
 
     # Report weights values
     print("Average weight per projection")
@@ -134,12 +172,36 @@ def post_run_analysis(filename, fig_folder, dark_background=False):
             key, _c, mean, Style.RESET_ALL),
             "c.f. {: 4.2f} ms ({:>7.2%})".format(
                 original_conn, prop_diff))
-
-
-
+    # Report accuracy
+    # TODO do this
+    output_nid_argmax = what_network_thinks(all_spikes[plot_order[-1]],
+                                            t_stim, simtime,
+                                            num_classes=num_classes)
+    conf_mat = confusion_matrix(test_labels, output_nid_argmax, labels=range(num_classes))
+    conf_mat = conf_mat.astype('float') / conf_mat.sum(axis=1)
+    print(classification_report(test_labels, output_nid_argmax))
     print("=" * 80)
-    print("Plotting figures...")
+    print("Plotting figures...")  # TODO Only plots raster for first 10 seconds
     print("-" * 80)
+
+    # Plot confusion matrix
+    fig_conn, ax1 = plt.subplots(1, 1, figsize=(9, 9), dpi=800)
+
+    ff_conn_ax = ax1.matshow(conf_mat, vmin=0, vmax=1)
+
+    ax1.set_title("Confusion matrix\n")
+    ax1.set_xlabel("Predicted label")
+    ax1.set_ylabel("True label")
+
+    divider = make_axes_locatable(plt.gca())
+    cax = divider.append_axes("right", "5%", pad="3%")
+    cbar = plt.colorbar(ff_conn_ax, cax=cax)
+    cbar.set_label("Percentage")
+
+    plt.tight_layout()
+    save_figure(plt, os.path.join(sim_fig_folder, "confusion_matrix"),
+                extensions=['.png', '.pdf'])
+    plt.close(fig_conn)
 
     # raster plot including ALL populations
     print("Plotting spiking raster plot for all populations")
@@ -149,6 +211,7 @@ def post_run_analysis(filename, fig_folder, dark_background=False):
         curr_ax = axes[index]
         # spike raster
         _times = all_spikes[pop][:, 1]
+        _times = _times[_times < 10000]
         _ids = all_spikes[pop][:, 0]
         curr_ax.scatter(_times,
                         _ids,
@@ -161,7 +224,6 @@ def post_run_analysis(filename, fig_folder, dark_background=False):
     save_figure(plt, os.path.join(sim_fig_folder, "raster_plots"),
                 extensions=['.png', '.pdf'])
     plt.close(f)
-
 
 
 if __name__ == "__main__":

@@ -59,6 +59,7 @@ durations = np.ones((N_layer, number_of_slots)) * t_stim
 rates = full_x_test[testing_examples, :].T
 y_test = full_y_test[testing_examples]
 
+
 # scaling rates
 _0_to_1_rates = rates / float(np.max(rates))
 rates = _0_to_1_rates * args.rate_scaling
@@ -76,10 +77,12 @@ populations, projections, extra_params = restore_simulator_from_file(
     sim, args.model,
     is_input_vrpss=True,
     vrpss_cellparams=input_params,
-    replace_params=replace)
-sim.set_number_of_neurons_per_core(SpikeSourcePoissonVariable, 64)
-sim.set_number_of_neurons_per_core(sim.SpikeSourcePoisson, 64)
-sim.set_number_of_neurons_per_core(sim.IF_curr_exp, 64)
+    replace_params=replace,
+    timestep=args.timestep
+)
+# sim.set_number_of_neurons_per_core(SpikeSourcePoissonVariable, 64)
+# sim.set_number_of_neurons_per_core(sim.SpikeSourcePoisson, 64)
+# sim.set_number_of_neurons_per_core(sim.IF_curr_exp, 64)
 # set_i_offsets(populations, runtime)
 
 for pop in populations[:]:
@@ -170,10 +173,11 @@ np.savez_compressed(results_file,
                     all_neurons=extra_params['all_neurons'],
                     testing_examples=testing_examples,
                     no_testing_examples=no_testing_examples,
+                    num_classes=10,
                     y_test=y_test,
                     input_params=input_params,
                     input_size=N_layer,
-                    sim_time=runtime,
+                    simtime=runtime,
                     sim_params=sim_params,
                     final_connectivity=final_connectivity,
                     init_connectivity=extra_params['all_connections'],

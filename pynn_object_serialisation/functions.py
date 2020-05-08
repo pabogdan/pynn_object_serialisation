@@ -130,7 +130,8 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
                                 is_input_vrpss=False,
                                 vrpss_cellparams=None,
                                 replace_params=None, n_boards_required=None,
-                                time_scale_factor=None, first_n_layers=None
+                                time_scale_factor=None, first_n_layers=None,
+                                timestep=1.0
                                 ):
     replace_params = replace_params or {}
 
@@ -156,9 +157,10 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
     # setup
     setup_params = json_data['setup']
     # TODO move setup outside into whatever experiment is run
-    sim.setup(setup_params['machine_time_step'] / 1000.,
-              setup_params['min_delay'],
-              setup_params['max_delay'],
+
+    sim.setup(timestep,
+              timestep,
+              timestep,
               n_boards_required=n_boards_required,
               time_scale_factor=time_scale_factor)
     extra_params = {}

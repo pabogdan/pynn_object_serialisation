@@ -39,6 +39,10 @@ parser.add_argument('--no_slices', type=int,
                          '(used for batch runs)',
                     default=None)
 
+parser.add_argument('--timestep', type=float,
+                    help='simulation timestep',
+                    default=1.0)
+
 parser.add_argument('--curr_slice', type=int,
                     help='number of current slice of input data '
                          '(used for batch runs)',
