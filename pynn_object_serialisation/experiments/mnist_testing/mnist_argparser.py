@@ -18,8 +18,10 @@ parser = argparse.ArgumentParser(
 parser.add_argument('model', type=str,
                     help='network architecture / model to train and test')
 
-parser.add_argument('--result_filename', type=str,
-                    help='filename for results')
+parser.add_argument('-o', '--output', type=str,
+                    help="name of the numpy archive (.npz) "
+                         "storing simulation results",
+                    dest='result_filename')
 
 parser.add_argument('--non_categorical', dest="non_categorical",
                     help='filename for results',
