@@ -58,15 +58,15 @@ input_params = {
 replace = None
 # produce parameter replacement dict
 output_v = []
-populations, projections, custom_params = restore_simulator_from_file(
+populations, projections, extra_params = restore_simulator_from_file(
     sim, args.model,
     is_input_vrpss=True,
     vrpss_cellparams=input_params,
     replace_params=replace)
-sim.set_number_of_neurons_per_core(SpikeSourcePoissonVariable, 16)
-sim.set_number_of_neurons_per_core(sim.SpikeSourcePoisson, 16)
+sim.set_number_of_neurons_per_core(SpikeSourcePoissonVariable, 64)
+sim.set_number_of_neurons_per_core(sim.SpikeSourcePoisson, 64)
 sim.set_number_of_neurons_per_core(sim.IF_curr_exp, 64)
-set_i_offsets(populations, runtime)
+# set_i_offsets(populations, runtime)
 
 for pop in populations[:]:
     pop.record("spikes")
@@ -153,13 +153,15 @@ np.savez_compressed(results_file,
                     output_v=output_v,
                     neo_spikes_dict=neo_spikes_dict,
                     all_spikes=spikes_dict,
+                    all_neurons=extra_params['all_neurons'],
                     y_test=y_test,
                     input_params=input_params,
                     input_size=N_layer,
                     sim_time=runtime,
                     sim_params=sim_params,
                     final_connectivity=final_connectivity,
-                    **spikes_dict)
+                    init_connectivity=extra_params['all_connections'],
+                    extra_params=extra_params)
 sim.end()
 # Analysis time!
 post_run_analysis(filename=results_file, fig_folder=args.figures_dir)

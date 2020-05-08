@@ -5,6 +5,7 @@ epochs = 20
 
 DEFAULT_MODEL_DIR = 'models/'
 DEFAULT_RESULT_DIR = 'results/'
+DEFAULT_FIGURE_DIR = 'figures/'
 
 DEFAULT_RATE_SCALING = 1000  # Hz
 DEFAULT_T_STIM = 200  # ms
@@ -27,7 +28,6 @@ parser.add_argument('--non_categorical', dest="non_categorical",
 parser.add_argument('--record_v',
                     help='record voltage for output neurons',
                     action="store_true")
-
 
 parser.add_argument('--test_with_pss',
                     help='Test using only the Poisson Spike Source '
@@ -73,9 +73,12 @@ parser.add_argument('--t_stim', type=int,
                     help='how long to present single patterns',
                     default=DEFAULT_T_STIM)
 
-
 parser.add_argument('--testing_examples', type=int,
                     help='number of testing examples to show',
                     default=DEFAULT_TESTING_EXAMPLES)
+
+parser.add_argument('--figures_dir', type=str,
+                    help='directory into which to save figures',
+                    default=DEFAULT_FIGURE_DIR)
 
 args = parser.parse_args()

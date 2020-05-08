@@ -161,18 +161,19 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
               setup_params['max_delay'],
               n_boards_required=n_boards_required,
               time_scale_factor=time_scale_factor)
-
+    extra_params = {}
     try:
-        custom_params = json_data['custom_params']
-    except KeyError:
-        custom_params = {}
+        extra_params['json_custom_params'] = json_data['custom_params']
+    except:
+        pass
     # set up populations
     # Add reports here
     total_no_neurons = 0
     total_no_synapses = 0
     max_synapses_per_neuron = 0
     no_afferents = {}
-    no_neurons = {}
+    all_neurons = {}
+    all_connections = {}
     print("Population reconstruction begins...")
     for pop_no in range(no_pops):
         pop_info = json_data['populations'][str(pop_no)]
@@ -202,7 +203,7 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
                 pop_cellparams[k] = replace_params[k]
 
         no_afferents[pop_info['label']] = 0
-        no_neurons[pop_info['label']] = pop_info['n_neurons']
+        all_neurons[pop_info['label']] = pop_info['n_neurons']
         total_no_neurons += pop_info['n_neurons']
         populations.append(
             sim.Population(
@@ -224,7 +225,7 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
         receptor_type = DEFAULT_RECEPTOR_TYPES[proj_info['receptor_type']]
         _type = "_exc" if receptor_type == "excitatory" else "_inh"
         conn_label = proj_info['pre_label'] + "_to_" + proj_info['post_label'] + _type
-        if proj_info['post_label'] not in no_neurons.keys():
+        if proj_info['post_label'] not in all_neurons.keys():
             print("Aborting the creation of proj", conn_label)
             continue
 
@@ -249,19 +250,22 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
               _c, DEFAULT_RECEPTOR_TYPES[proj_info['receptor_type']],
               Style.RESET_ALL,
               "synapses")
+        # Storing projection info based on name of post-synaptic population
         no_afferents[proj_info['post_label']] += number_of_synapses
-        projections.append(
-            sim.Projection(
-                populations[proj_info['pre_number']],  # pre population
-                populations[proj_info['post_number']],  # post population
-                pydoc.locate(proj_info['connector_type'])(_conn),  # connector
-                synapse_type=synapse_dynamics,
-                source=proj_info['source'],
-                receptor_type=DEFAULT_RECEPTOR_TYPES[proj_info['receptor_type']],
-                space=proj_info['space'],
-                label=conn_label
+        all_connections[conn_label] = _conn
+        if len(_conn) > 0:
+            projections.append(
+                sim.Projection(
+                    populations[proj_info['pre_number']],  # pre population
+                    populations[proj_info['post_number']],  # post population
+                    pydoc.locate(proj_info['connector_type'])(_conn),  # connector
+                    synapse_type=synapse_dynamics,
+                    source=proj_info['source'],
+                    receptor_type=DEFAULT_RECEPTOR_TYPES[proj_info['receptor_type']],
+                    space=proj_info['space'],
+                    label=conn_label
+                )
             )
-        )
 
     connectivity_data.close()
     print("Reconstruction complete!")
@@ -282,9 +286,14 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
             k,
             format(int(no_afferents[k]), ",")))
         print("\tthat is {:15.2f} synapses / neuron".format(
-            no_afferents[k] / no_neurons[k]))
+            no_afferents[k] / all_neurons[k]))
     print("=" * 80)
-    return populations, projections, custom_params
+
+    extra_params['all_neurons'] = all_neurons
+    extra_params['all_connections'] = all_connections
+    extra_params['json_dict'] = json_data
+
+    return populations, projections, extra_params
 
 
 def write_report(msg, value):
