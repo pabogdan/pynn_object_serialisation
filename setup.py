@@ -22,7 +22,8 @@ setup(
                       "argparse",
                       "pillow",
                       "colorama",
-                      "brian2"],
+                      "brian2",
+                      "scikit-learn"],
     classifiers=[
         "Development Status :: 3 - Alpha",
 
