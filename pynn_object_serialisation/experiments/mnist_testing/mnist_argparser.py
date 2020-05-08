@@ -9,7 +9,7 @@ DEFAULT_FIGURE_DIR = 'figures/'
 
 DEFAULT_RATE_SCALING = 1000  # Hz
 DEFAULT_T_STIM = 200  # ms
-DEFAULT_TESTING_EXAMPLES = 10000
+DEFAULT_TESTING_EXAMPLES = None
 
 parser = argparse.ArgumentParser(
     description='converted-MNIST argparser',
@@ -33,6 +33,16 @@ parser.add_argument('--test_with_pss',
                     help='Test using only the Poisson Spike Source '
                          '(not variable)',
                     action="store_true")
+
+parser.add_argument('--no_slices', type=int,
+                    help='number of total input data slices '
+                         '(used for batch runs)',
+                    default=None)
+
+parser.add_argument('--curr_slice', type=int,
+                    help='number of current slice of input data '
+                         '(used for batch runs)',
+                    default=None)
 
 parser.add_argument('--epochs', type=int,
                     help='number of epochs', default=epochs)

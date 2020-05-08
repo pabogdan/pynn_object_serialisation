@@ -18,6 +18,13 @@ import pylab as plt
 import os
 import traceback
 
+# Check parameters passed in from argparser
+if args.testing_examples and (args.no_slices or args.curr_slice):
+    raise AttributeError("Can't received both number of testing examples and "
+                         "slice information.")
+
+
+
 # Record SCRIPT start time (wall clock)
 start_time = plt.datetime.datetime.now()
 
@@ -27,23 +34,30 @@ if not os.path.isdir(args.result_dir) and not os.path.exists(args.result_dir):
 
 N_layer = 28 ** 2  # number of neurons in each population
 t_stim = args.t_stim
-(x_train, y_train), (x_test, y_test) = mnist.load_data()
+(x_train, y_train), (full_x_test, full_y_test) = mnist.load_data()
 # reshape input to flatten data
-x_train = x_train.reshape(x_train.shape[0], np.prod(x_train.shape[1:]))
-x_test = x_test.reshape(x_test.shape[0], np.prod(x_test.shape[1:]))
+# x_train = x_train.reshape(x_train.shape[0], np.prod(x_train.shape[1:]))
+full_x_test = full_x_test.reshape(full_x_test.shape[0], np.prod(full_x_test.shape[1:]))
 
-if args.testing_examples:
-    testing_examples = args.testing_examples
+if not (args.no_slices or args.curr_slice):
+    if args.testing_examples:
+        no_testing_examples = args.testing_examples
+    else:
+        no_testing_examples = full_x_test.shape[0]
+    testing_examples = np.arange(no_testing_examples)
 else:
-    testing_examples = x_test.shape[0]
+    no_testing_examples = full_x_test.shape[0] // args.no_slices
+    testing_examples = \
+        np.arange(full_x_test.shape[0])[args.curr_slice * no_testing_examples:
+                                   (args.curr_slice + 1) * no_testing_examples]
 
-runtime = testing_examples * t_stim
+runtime = no_testing_examples * t_stim
 number_of_slots = int(runtime / t_stim)
 range_of_slots = np.arange(number_of_slots)
 starts = np.ones((N_layer, number_of_slots)) * (range_of_slots * t_stim)
 durations = np.ones((N_layer, number_of_slots)) * t_stim
-# rates = np.random.randint(1, 5, size=(N_layer, number_of_slots))
-rates = x_test[:testing_examples, :].T
+rates = full_x_test[testing_examples, :].T
+y_test = full_y_test[testing_examples]
 
 # scaling rates
 _0_to_1_rates = rates / float(np.max(rates))
@@ -154,6 +168,8 @@ np.savez_compressed(results_file,
                     neo_spikes_dict=neo_spikes_dict,
                     all_spikes=spikes_dict,
                     all_neurons=extra_params['all_neurons'],
+                    testing_examples=testing_examples,
+                    no_testing_examples=no_testing_examples,
                     y_test=y_test,
                     input_params=input_params,
                     input_size=N_layer,
