@@ -108,6 +108,7 @@ for network in args.models:
         os.chdir("..")
         print("=" * 80)
         # TODO block if re-running simulations and not yet done (how would I know?)
+    os.chdir("..")
 print("All done!")
 
 end_time = plt.datetime.datetime.now()
