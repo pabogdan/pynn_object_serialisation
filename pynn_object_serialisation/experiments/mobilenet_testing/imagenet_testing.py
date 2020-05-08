@@ -117,9 +117,7 @@ else:
     if args.suffix:
         results_filename += args.suffix
     else:
-        import pylab
-
-        now = pylab.datetime.datetime.now()
+        now = plt.datetime.datetime.now()
         results_filename += "_" + now.strftime("_%H%M%S_%d%m%Y")
 # Retrieve simulation parameters for provenance tracking and debugging purposes
 sim_params = {

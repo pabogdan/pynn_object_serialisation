@@ -4,7 +4,7 @@ from pynn_object_serialisation.functions import DEFAULT_RECEPTOR_TYPES
 from pynn_object_serialisation.experiments.analysis_common import *
 
 
-def network_statistics(filename, fig_folder, dark_background=False):
+def pre_run_analysis(filename, fig_folder, dark_background=False):
     if dark_background:
         plt.style.use('dark_background')
     print("=" * 80)
@@ -86,12 +86,8 @@ def network_statistics(filename, fig_folder, dark_background=False):
         for post_nid in range(post_n_neurons):
             fan_in_for_the_current_conn = np.count_nonzero([_conn[:, 1].astype(int) == post_nid])
             all_afferents[proj_info['post_label']][post_nid] += fan_in_for_the_current_conn
-        all_efferents
 
 
-    # for k, v in all_afferents.items():
-        # if v == 0:
-        #     del conn_py_post[k]
     print("=" * 80)
     print("Reports")
     print("-" * 80)
@@ -205,8 +201,5 @@ if __name__ == "__main__":
 
     if analysis_args.input and len(analysis_args.input) > 0:
         for in_file in analysis_args.input:
-            # try:
-            network_statistics(in_file, analysis_args.figures_dir,
-                               dark_background=analysis_args.dark_background)
-            # except:
-            #     traceback.print_exc()
+            pre_run_analysis(in_file, analysis_args.figures_dir,
+                             dark_background=analysis_args.dark_background)
