@@ -47,6 +47,19 @@ parameters_of_interest = {
 
 log_calls = []
 
+# making a directory for this experiment
+dir_name = "{}_@{}".format("parallel_run", suffix)
+print("=" * 80)
+print("TOTAL RUNS", total_runs)
+if not os.path.isdir(dir_name):
+    print("MKDIR", dir_name)
+    os.mkdir(dir_name)
+else:
+    print("FOLDER ALREADY EXISTS. RE-RUNNING INCOMPLETE JOBS.")
+print("CHDIR", dir_name)
+os.chdir(dir_name)
+print("GETCWD", os.getcwd())
+
 for network in args.models:
     # making a directory for this experiment
     dir_name = "{}_@{}".format(ntpath.basename(network), suffix)
@@ -78,15 +91,15 @@ for network in args.models:
             prev_run = False
         os.chdir(filename)
         print("GETCWD", os.getcwd())
-        shutil.copyfile("../../spynnaker.cfg", "spynnaker.cfg")
+        shutil.copyfile("../../../spynnaker.cfg", "spynnaker.cfg")
 
         concurrently_active_processes += 1
         null = open(os.devnull, 'w')
         print("Run ", concurrently_active_processes, "...")
 
         call = [sys.executable,
-                args.model_script,
-                network,
+                os.path.join("../../../", args.model_script),
+                os.path.join("../../../", network),
                 '-o', filename,
                 '--no_slices', str(args.no_slices),
                 '--curr_slice', str(slice),
@@ -116,4 +129,5 @@ total_time = end_time - currrent_time
 np.savez_compressed("batch_{}".format(suffix),
                     parameters_of_interest=parameters_of_interest,
                     total_time=total_time,
-                    log_calls=log_calls)
+                    log_calls=log_calls,
+                    argparser=vars(args))
