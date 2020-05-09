@@ -29,32 +29,7 @@ def what_network_thinks(spikes, t_stim, simtime, num_classes):
     return argmax_result
 
 
-def post_run_analysis(filename, fig_folder, dark_background=False):
-    if dark_background:
-        plt.style.use('dark_background')
-    # Retrieve results file
-    try:
-        data = np.load(filename, allow_pickle=True)
-    except FileNotFoundError:
-        data = np.load(filename + ".npz", allow_pickle=True)
-        filename += ".npz"
-
-    # Check if the folders exist
-    if not os.path.isdir(fig_folder) and not os.path.exists(fig_folder):
-        os.mkdir(fig_folder)
-
-    # Create figures folder for this results_file
-    sim_fig_folder = os.path.join(fig_folder,
-                                  str(ntpath.basename(filename))[:-4])
-    if not os.path.isdir(sim_fig_folder) and not os.path.exists(sim_fig_folder):
-        os.mkdir(sim_fig_folder)
-    # Set up colours
-    color_init(strip=False)
-
-    # Plotting results for ...
-    print("=" * 80)
-    print("Plotting results for", filename)
-    print("-" * 80)
+def single_run_post_analysis(data):
     # Retrieve information from results file
     all_spikes = data['all_spikes'].ravel()[0]
     try:
@@ -95,14 +70,12 @@ def post_run_analysis(filename, fig_folder, dark_background=False):
 
     # Compute plot order
     plot_order = list(all_spikes.keys())
-    n_plots = float(len(plot_order))
     # Report number of neurons
     print("=" * 80)
     print("Number of neurons in each population")
     print("-" * 80)
     for pop in plot_order:
         print("\t{:30} -> {:10} neurons".format(pop, all_neurons[pop]))
-
 
     # Report weights values
     print("Average weight per projection")
@@ -115,7 +88,6 @@ def post_run_analysis(filename, fig_folder, dark_background=False):
         if final_connectivity[key] is None or conn.size == 0:
             print("Skipping analysing connection", key)
             continue
-        conn_exists = True
         if len(conn.shape) == 1 or conn.shape[1] != 4:
             try:
                 x = np.concatenate(conn)
@@ -172,16 +144,68 @@ def post_run_analysis(filename, fig_folder, dark_background=False):
             key, _c, mean, Style.RESET_ALL),
             "c.f. {: 4.2f} ms ({:>7.2%})".format(
                 original_conn, prop_diff))
-    # Report accuracy
-    # TODO do this
+
+    # Compute accuracy
     output_nid_argmax = what_network_thinks(all_spikes[plot_order[-1]],
                                             t_stim, simtime,
                                             num_classes=num_classes)
+
+    results = {
+        'all_spikes': all_spikes,
+        'true_labels': test_labels,
+        'predicated_labels': output_nid_argmax,
+        'num_classes': num_classes,
+        'plot_order': plot_order
+    }
+    return results
+
+
+def post_run_analysis(filename, fig_folder, dark_background=False):
+    if dark_background:
+        plt.style.use('dark_background')
+    # Retrieve results file
+    try:
+        data = np.load(filename, allow_pickle=True)
+    except FileNotFoundError:
+        data = np.load(filename + ".npz", allow_pickle=True)
+        filename += ".npz"
+
+    # Check if the folders exist
+    if not os.path.isdir(fig_folder) and not os.path.exists(fig_folder):
+        os.mkdir(fig_folder)
+
+    # Create figures folder for this results_file
+    sim_fig_folder = os.path.join(fig_folder,
+                                  str(ntpath.basename(filename))[:-4])
+    if not os.path.isdir(sim_fig_folder) and not os.path.exists(sim_fig_folder):
+        os.mkdir(sim_fig_folder)
+    # Set up colours
+    color_init(strip=False)
+
+    # Plotting results for ...
+    print("=" * 80)
+    print("Analysing results for", filename)
+    print("-" * 80)
+
+    # TODO Loop over all available result files
+    results = single_run_post_analysis(data)
+
+    # TODO Aggregate results (should be safe on SANDS)
+
+    # Use the results
+    all_spikes = results['all_spikes']
+    test_labels = results['true_labels']
+    output_nid_argmax = results['predicated_labels']
+    num_classes = results['num_classes']
+    plot_order = results['plot_order']
+    n_plots = float(len(plot_order))
+
     conf_mat = confusion_matrix(test_labels, output_nid_argmax, labels=range(num_classes))
     conf_mat = conf_mat.astype('float') / conf_mat.sum(axis=1)
     print(classification_report(test_labels, output_nid_argmax))
+
     print("=" * 80)
-    print("Plotting figures...")  # TODO Only plots raster for first 10 seconds
+    print("Plotting figures...")
     print("-" * 80)
 
     # Plot confusion matrix
