@@ -27,6 +27,11 @@ parser.add_argument('--non_categorical', dest="non_categorical",
                     help='filename for results',
                     action="store_false")
 
+parser.add_argument('--reset_v',
+                    help='Reset voltage of all neurons in the network after '
+                         'each pattern presentation',
+                    action="store_true")
+
 parser.add_argument('--record_v',
                     help='record voltage for output neurons',
                     action="store_true")

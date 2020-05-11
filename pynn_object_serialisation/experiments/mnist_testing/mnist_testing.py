@@ -96,7 +96,17 @@ final_connectivity = {}
 
 sim_start_time = plt.datetime.datetime.now()
 try:
-    sim.run(runtime)
+    if not args.reset_v:
+        sim.run(runtime)
+    else:
+        run_duration = args.t_stim  # ms
+        no_runs = runtime // run_duration
+        for curr_run_number in range(no_runs):
+            print("RUN NUMBER", curr_run_number, "STARTED")
+            sim.run(run_duration)  # ms
+            for pop in populations[1:]:
+                pop.set_initial_value("v", 0)
+            print("RUN NUMBER", curr_run_number, "COMPLETED")
 except Exception as e:
     print("An exception occurred during execution!")
     traceback.print_exc()

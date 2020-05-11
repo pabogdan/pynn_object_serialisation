@@ -103,8 +103,8 @@ for network in args.models:
                 '-o', filename,
                 '--no_slices', str(args.no_slices),
                 '--curr_slice', str(slice),
-                '--timestep', str(1.0),
-                '--t_stim', str(500),
+                '--timestep', str(args.timestep),
+                '--t_stim', str(args.t_stim),
         ]
         print("CALL", call)
         log_calls.append((call, filename, curr_params))

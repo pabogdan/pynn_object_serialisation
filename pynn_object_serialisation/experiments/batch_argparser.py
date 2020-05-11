@@ -10,6 +10,7 @@ DEFAULT_SUFFIX = None
 DEFAULT_NO_SLICES = 10
 DEFAULT_RATE_SCALING = 1000  # Hz
 DEFAULT_T_STIM = 200  # ms
+DEFAULT_TIMESTEP = 1.0
 
 # Argument parser
 parser = argparse.ArgumentParser(
@@ -43,6 +44,10 @@ parser.add_argument('--no_cpus', type=int,
 parser.add_argument('--t_stim', type=int,
                     help='how long to present single patterns',
                     default=DEFAULT_T_STIM)
+
+parser.add_argument('--timestep', type=float,
+                    help='simulation time step',
+                    default=DEFAULT_TIMESTEP)
 
 parser.add_argument('--max_processes', type=int,
                     default=DEFAULT_MAX_CONCURRENT_PROCESSES,
