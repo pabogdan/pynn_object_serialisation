@@ -32,11 +32,7 @@ class OutputDataProcessor():
                                         (self.y_test.shape[-1] == self.layer_shapes[-1][0] or\
                                         self.y_test.shape[0] == self.layer_shapes[-1][0]):
             self.y_test = self.convert_output_to_index(self.y_test)
-        self.y_pred = np.array(self.get_batch_predictions(), dtype=np.int8) 
-        labels = np.load(
-            '/mnt/snntoolbox/snn_toolbox_private/examples/models/05-mobilenet_dwarf_v1/label_names.npz')
-        self.label_names = labels['arr_0']
-        labels.close()
+        self.y_pred = np.array(self.get_batch_predictions(), dtype=np.int8)
     
     def set_dt(self):
         try:
