@@ -163,92 +163,130 @@ def single_run_post_analysis(data):
 def post_run_analysis(filename, fig_folder, dark_background=False):
     if dark_background:
         plt.style.use('dark_background')
-    # Retrieve results file
-    try:
-        data = np.load(filename, allow_pickle=True)
-    except FileNotFoundError:
-        data = np.load(filename + ".npz", allow_pickle=True)
-        filename += ".npz"
+    # Check whether the current file is a directory (so multiple runs)
+    in_file_is_dir = os.path.isdir(filename)
+    if in_file_is_dir:
+        # Retrieve list of other directories in this directory
+        files_in_dir = os.listdir(filename)
+        # TODO Split results based on these top-level dirs
+        dirs_in_dir = [os.path.join(filename, fid) for fid in files_in_dir
+                       if os.path.isdir(os.path.join(filename, fid))]
+        # In turn, these dirs should have multiple directories in them,
+        # corresponding to different slices
+        results_locations = {}
+        for d in dirs_in_dir:
+            results_locations[d] = [os.path.join(d, x, "results", x) for x in os.listdir(d)]
+    else:
+        results_locations = {filename: [filename]}
+
 
     # Check if the folders exist
     if not os.path.isdir(fig_folder) and not os.path.exists(fig_folder):
         os.mkdir(fig_folder)
 
-    # Create figures folder for this results_file
-    sim_fig_folder = os.path.join(fig_folder,
-                                  str(ntpath.basename(filename))[:-4])
-    if not os.path.isdir(sim_fig_folder) and not os.path.exists(sim_fig_folder):
-        os.mkdir(sim_fig_folder)
     # Set up colours
     color_init(strip=False)
 
-    # Plotting results for ...
-    print("=" * 80)
-    print("Analysing results for", filename)
-    print("-" * 80)
+    for major_run in results_locations.keys():
+        # Create figures folder for this results_file
+        sim_fig_folder = os.path.join(fig_folder,
+                                      str(ntpath.basename(major_run)))
+        if not os.path.isdir(sim_fig_folder) and not os.path.exists(sim_fig_folder):
+            os.mkdir(sim_fig_folder)
 
-    # TODO Loop over all available result files
-    results = single_run_post_analysis(data)
+        collated_results = {}
+        for slice_run in results_locations[major_run]:
+            # Retrieve results file
+            curr_filename = slice_run
+            try:
+                data = np.load(curr_filename, allow_pickle=True)
+            except FileNotFoundError:
+                data = np.load(curr_filename + ".npz", allow_pickle=True)
+                curr_filename += ".npz"
 
-    # TODO Aggregate results (should be safe on SANDS)
+            # TODO Loop over all available result files
+            results = single_run_post_analysis(data)
 
-    # Use the results
-    all_spikes = results['all_spikes']
-    test_labels = results['true_labels']
-    output_nid_argmax = results['predicated_labels']
-    num_classes = results['num_classes']
-    plot_order = results['plot_order']
-    n_plots = float(len(plot_order))
+            # TODO Aggregate results (should be safe on SANDS)
+            collated_results[slice_run] = results
 
-    conf_mat = confusion_matrix(test_labels, output_nid_argmax, labels=range(num_classes))
-    conf_mat = conf_mat.astype('float') / conf_mat.sum(axis=1)
-    print(classification_report(test_labels, output_nid_argmax))
+        # Plotting results for ...
+        print("=" * 80)
+        print("Analysing results for", major_run)
+        print("-" * 80)
 
-    print("=" * 80)
-    print("Plotting figures...")
-    print("-" * 80)
+        # The bit where I need to re-combine all of the results in a useful fashion
+        # Use the results
+        combined_predicted_labels = []
+        combined_real_labels = []
+        num_classes = -1
+        for curr_run, curr_results in collated_results.items():
+            # Spikes can be treated individually
+            all_spikes = curr_results['all_spikes']
+            # Labels can be stitched together
+            combined_real_labels.append(curr_results['true_labels'])
+            combined_predicted_labels.append(curr_results['predicated_labels'])
+            # number of classes should be the same between runs
+            num_classes = curr_results['num_classes']
+            # plot order should be the same between runs
+            plot_order = curr_results['plot_order']
+            n_plots = float(len(plot_order))
 
-    # Plot confusion matrix
-    fig_conn, ax1 = plt.subplots(1, 1, figsize=(9, 9), dpi=800)
+            print("=" * 80)
+            print("Plotting figures for", curr_run)
+            print("-" * 80)
+            # raster plot including ALL populations
+            print("Plotting spiking raster plot for all populations")
+            f, axes = plt.subplots(len(all_spikes.keys()), 1,
+                                   figsize=(14, 20), sharex=True, dpi=400)
+            for index, pop in enumerate(plot_order):
+                curr_ax = axes[index]
+                # spike raster
+                curr_spikes = all_spikes[pop]
+                curr_filtered_spikes = curr_spikes[curr_spikes[:, 1] < 10000]
+                _times = curr_filtered_spikes[:, 1]
+                _ids = curr_filtered_spikes[:, 0]
+                curr_ax.scatter(_times,
+                                _ids,
+                                color=viridis_cmap(index / (n_plots + 1)),
+                                s=.5, rasterized=True)
+                curr_ax.set_title(use_display_name(pop))
+            plt.xlabel("Time (ms)")
+            # plt.suptitle((use_display_name(simulator)+"\n")
+            f.tight_layout()
+            save_figure(plt, os.path.join(sim_fig_folder,
+                                          "raster_plots_{}".format(
+                                              str(ntpath.basename(curr_run)))),
+                        extensions=['.png', '.pdf'])
+            plt.close(f)
+        print("=" * 80)
+        print("Plotting figures for", major_run)
+        print("-" * 80)
 
-    ff_conn_ax = ax1.matshow(conf_mat, vmin=0, vmax=1)
+        combined_predicted_labels = np.asarray(combined_predicted_labels).ravel()
+        combined_real_labels = np.asarray(combined_real_labels).ravel()
 
-    ax1.set_title("Confusion matrix\n")
-    ax1.set_xlabel("Predicted label")
-    ax1.set_ylabel("True label")
+        conf_mat = confusion_matrix(combined_real_labels, combined_predicted_labels, labels=range(num_classes))
+        conf_mat = conf_mat.astype('float') / conf_mat.sum(axis=1)
+        print(classification_report(combined_real_labels, combined_predicted_labels))
+        # Plot confusion matrix
+        fig_conn, ax1 = plt.subplots(1, 1, figsize=(9, 9), dpi=500)
 
-    divider = make_axes_locatable(plt.gca())
-    cax = divider.append_axes("right", "5%", pad="3%")
-    cbar = plt.colorbar(ff_conn_ax, cax=cax)
-    cbar.set_label("Percentage")
+        ff_conn_ax = ax1.matshow(conf_mat, vmin=0, vmax=1)
 
-    plt.tight_layout()
-    save_figure(plt, os.path.join(sim_fig_folder, "confusion_matrix"),
-                extensions=['.png', '.pdf'])
-    plt.close(fig_conn)
+        ax1.set_title("SNN Confusion matrix\n")
+        ax1.set_xlabel("Predicted label")
+        ax1.set_ylabel("True label")
 
-    # raster plot including ALL populations
-    print("Plotting spiking raster plot for all populations")
-    f, axes = plt.subplots(len(all_spikes.keys()), 1,
-                           figsize=(14, 20), sharex=True, dpi=400)
-    for index, pop in enumerate(plot_order):
-        curr_ax = axes[index]
-        # spike raster
-        curr_spikes = all_spikes[pop]
-        curr_filtered_spikes = curr_spikes[curr_spikes[:, 1] < 10000]
-        _times = curr_filtered_spikes[:, 1]
-        _ids = curr_filtered_spikes[:, 0]
-        curr_ax.scatter(_times,
-                        _ids,
-                        color=viridis_cmap(index / (n_plots + 1)),
-                        s=.5, rasterized=True)
-        curr_ax.set_title(use_display_name(pop))
-    plt.xlabel("Time (ms)")
-    # plt.suptitle((use_display_name(simulator)+"\n")
-    f.tight_layout()
-    save_figure(plt, os.path.join(sim_fig_folder, "raster_plots"),
-                extensions=['.png', '.pdf'])
-    plt.close(f)
+        divider = make_axes_locatable(plt.gca())
+        cax = divider.append_axes("right", "5%", pad="3%")
+        cbar = plt.colorbar(ff_conn_ax, cax=cax)
+        cbar.set_label("Percentage")
+
+        plt.tight_layout()
+        save_figure(plt, os.path.join(sim_fig_folder, "confusion_matrix"),
+                    extensions=['.png', '.pdf'])
+        plt.close(fig_conn)
 
 
 if __name__ == "__main__":
