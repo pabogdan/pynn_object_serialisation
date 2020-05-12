@@ -132,11 +132,6 @@ def run(args, start_index):
     if args.record_v:
         output_v = populations[-1].spinnaker_get_data('v')
 
-    folder_details = "/model_name_{}_t_stim_{}_rate_scaling_{}_tsf_{}_testing_examples_{}_dt_{}".format \
-        (args.model, args.t_stim, args.rate_scaling, args.time_scale_factor, args.testing_examples, args.dt)
-
-    args.result_dir += folder_details
-
     # Checking directory structure exists
     if not os.path.isdir(args.result_dir) and not os.path.exists(args.result_dir):
         os.mkdir(args.result_dir)
@@ -172,6 +167,12 @@ if __name__ == "__main__":
     import mnist_argparser
 
     args = mnist_argparser.main()
+
+    folder_details = "/model_name_{}_t_stim_{}_rate_scaling_{}_tsf_{}_testing_examples_{}_dt_{}".format \
+        (args.model, args.t_stim, args.rate_scaling, args.time_scale_factor, args.testing_examples, args.dt)
+
+    args.result_dir += folder_details
+
     # run(args, 0)
     # Make a pool
     p = Pool(args.number_of_threads)
