@@ -90,7 +90,7 @@ def run(args, start_index):
 
     replace = None
     setup_params = {}
-    setup_params['machine_time_step'] = args.dt*1000
+    setup_params['machine_time_step'] = args.dt * 1000
     output_v = []
     populations, projections, custom_params = restore_simulator_from_file(
         sim, args.model,
@@ -133,6 +133,12 @@ def run(args, start_index):
         spikes_dict[pop.label] = pop.spinnaker_get_data('spikes')
     if args.record_v:
         output_v = populations[-1].spinnaker_get_data('v')
+
+    folder_details = "/model_name_{}_t_stim_{}_rate_scaling_{}_tsf_{}_testing_examples_{}_dt_{}".format \
+        (args.model, args.t_stim, args.rate_scaling, args.time_scale_factor, args.testing_examples, args.dt)
+
+    if args.result_dir:
+        args.result_dir += folder_details
 
     if args.result_filename:
         results_filename = args.result_filename
