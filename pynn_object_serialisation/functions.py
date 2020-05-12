@@ -129,9 +129,10 @@ def intercept_simulator(sim, output_filename=None, cellparams=None,
 def restore_simulator_from_file(sim, filename, prune_level=1.,
                                 input_type=None,
                                 vrpss_cellparams=None,
-                                ssa_cellparams = None,
+                                ssa_cellparams=None,
                                 replace_params=None, n_boards_required=None,
-                                time_scale_factor=None, first_n_layers=None
+                                time_scale_factor=None, first_n_layers=None,
+                                replace_setup_params=None
                                 ):
     replace_params = replace_params or {}
 
@@ -156,6 +157,12 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
     no_proj = len(json_data['projections'].keys())
     # setup
     setup_params = json_data['setup']
+    for key in replace_setup_params:
+        setup_params[key] = replace_setup_params[key]
+
+    #Just to fix min delay being too small.
+    if setup_params['min_delay']<setup_params['machine_time_step']:
+        setup_params['min_delay'] = setup_params['machine_time_step']/1000
     # TODO move setup outside into whatever experiment is run
     sim.setup(setup_params['machine_time_step'] / 1000.,
               setup_params['min_delay'],
@@ -253,7 +260,7 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
 
         number_of_synapses = _conn.shape[0]
         max_synapses_per_neuron = max(max_synapses_per_neuron,
-                                      number_of_synapses/ post_n_neurons)
+                                      number_of_synapses / post_n_neurons)
         # create the projection
         print("Reconstructing proj", conn_label)
         _c = Fore.GREEN if receptor_type == "excitatory" else Fore.RED
@@ -411,7 +418,7 @@ def extract_parameters(filename, output_dir, output_type="npz"):
     """
     import os
 
-    #Grab the files
+    # Grab the files
 
     # Objects and parameters
     projections = []
@@ -434,7 +441,7 @@ def extract_parameters(filename, output_dir, output_type="npz"):
         os.mkdir(output_dir)
     os.chdir(output_dir)
 
-    #Loop over layers
+    # Loop over layers
     for pop_no in range(no_pops):
         pop_info = json_data['populations'][str(pop_no)]
         p_id = pop_info['id']
@@ -449,15 +456,14 @@ def extract_parameters(filename, output_dir, output_type="npz"):
 
         print("Found pop {:35}".format(pop_info['label']), "containing",
               format(pop_info['n_neurons'], ","), "neurons")
-        #Generate txt file that defines population (number of neurons, neuron model etc.)
-        f= open("Population_description.txt","w+")
+        # Generate txt file that defines population (number of neurons, neuron model etc.)
+        f = open("Population_description.txt", "w+")
         for key in pop_info.keys():
-            f.write(str(key) + " : " + str(pop_info[key]) +'\n')
+            f.write(str(key) + " : " + str(pop_info[key]) + '\n')
 
-        #Make a directory for inhibitory and excitatory projections
+        # Make a directory for inhibitory and excitatory projections
         if not os.path.exists("exc_projections"):
             os.mkdir("exc_projections")
-
 
         if not os.path.exists("inh_projections"):
             os.mkdir("inh_projections")
@@ -474,7 +480,7 @@ def extract_parameters(filename, output_dir, output_type="npz"):
             print("Aborting the creation of proj", conn_label)
             continue
         print("Outputting {}".format(conn_label))
-        #Go to the correct directory
+        # Go to the correct directory
         os.chdir(proj_info['post_label'])
         if _type == "_exc":
             os.chdir("exc_projections")
@@ -483,40 +489,42 @@ def extract_parameters(filename, output_dir, output_type="npz"):
         else:
             print("How did you manage to get a receptor type that isn't exc or inh?")
 
-
-        #Convert from_list to matrix
+        # Convert from_list to matrix
         weight_matrix = convert_from_list_to_matrix(connectivity_data[str(proj_info['id'])])
         if output_type == "npz":
-            #Write a npz
+            # Write a npz
             scipy.sparse.save_npz("connections" + _type, weight_matrix)
         if output_type == "csv":
             dense_matrix = weight_matrix.todense()
-            np.savetxt("connections" + _type +".csv", dense_matrix, delimiter=",")
+            np.savetxt("connections" + _type + ".csv", dense_matrix, delimiter=",")
         else:
             print("Did not understand output type.")
-        #Leave
+        # Leave
         os.chdir(output_dir)
 
     connectivity_data.close()
-    #Put connectivity .npz in these directories
+    # Put connectivity .npz in these directories
 
-    #Is there some way to spot convolution? Probably not
-    #Actually, could you use something akin to dictionary coding:
-    #For every pre weight assign a letter to a (relative_pre_neuron_index, weight) pair
-    #This should be repeated
-    #Sounds like a lot of work
+    # Is there some way to spot convolution? Probably not
+    # Actually, could you use something akin to dictionary coding:
+    # For every pre weight assign a letter to a (relative_pre_neuron_index, weight) pair
+    # This should be repeated
+    # Sounds like a lot of work
+
 
 def convert_from_list_to_matrix(from_list):
     """Converts a from_list connector to an ANN-like connectivity matrix.
     """
     from scipy import sparse
-    #from_list (pre_index, post_index, weight, delay)
+    # from_list (pre_index, post_index, weight, delay)
     from_list = np.array(from_list)
-    mat_coo = sparse.coo_matrix((from_list[:,2], (from_list[:,0].astype(int), from_list[:,1].astype(int))))
+    mat_coo = sparse.coo_matrix((from_list[:, 2], (from_list[:, 0].astype(int), from_list[:, 1].astype(int))))
     return mat_coo
+
 
 def main():
     pass
-if __name__ == "__main__":
-   main()
 
+
+if __name__ == "__main__":
+    main()

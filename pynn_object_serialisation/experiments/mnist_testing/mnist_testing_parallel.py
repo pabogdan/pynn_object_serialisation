@@ -89,13 +89,16 @@ def run(args, start_index):
     }
 
     replace = None
+    setup_params = {}
+    setup_params['machine_time_step'] = args.dt*1000
     output_v = []
     populations, projections, custom_params = restore_simulator_from_file(
         sim, args.model,
         input_type='vrpss',
         time_scale_factor=args.time_scale_factor,
         vrpss_cellparams=input_params,
-        replace_params=replace)
+        replace_params=replace,
+        replace_setup_params=setup_params)
     dt = sim.get_time_step()
     min_delay = sim.get_min_delay()
     max_delay = sim.get_max_delay()

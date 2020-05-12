@@ -13,6 +13,8 @@ DEFAULT_TESTING_EXAMPLES = 10000
 DEFAULT_CHUNK_SIZE = 100
 DEFAULT_NUMBER_OF_THREADS = 1
 DEFAULT_TIME_SCALE_FACTOR = 100
+DEFAULT_DT=0.1
+
 
 parser = argparse.ArgumentParser(
     description='converted-MNIST argparser',
@@ -76,7 +78,9 @@ parser.add_argument('--rate_scaling', type=float,
 parser.add_argument('--t_stim', type=int,
                     help='how long to present single patterns',
                     default=DEFAULT_T_STIM)
-
+parser.add_argument('--dt', type=float,
+                    help='the timestep in ms',
+                    default=DEFAULT_DT)
 
 parser.add_argument('--testing_examples', type=int,
                     help='number of testing examples to show',
