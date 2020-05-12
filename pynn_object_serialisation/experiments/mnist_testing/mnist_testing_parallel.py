@@ -58,9 +58,7 @@ def run(args, start_index):
     sys.stdout = f
     sys.stderr = g
 
-    # Checking directory structure exists
-    if not os.path.isdir(args.result_dir) and not os.path.exists(args.result_dir):
-        os.mkdir(args.result_dir)
+
 
     N_layer = 28 ** 2  # number of neurons in each population
     t_stim = args.t_stim
@@ -137,8 +135,11 @@ def run(args, start_index):
     folder_details = "/model_name_{}_t_stim_{}_rate_scaling_{}_tsf_{}_testing_examples_{}_dt_{}".format \
         (args.model, args.t_stim, args.rate_scaling, args.time_scale_factor, args.testing_examples, args.dt)
 
-    if args.result_dir:
-        args.result_dir += folder_details
+    args.result_dir += folder_details
+
+    # Checking directory structure exists
+    if not os.path.isdir(args.result_dir) and not os.path.exists(args.result_dir):
+        os.mkdir(args.result_dir)
 
     if args.result_filename:
         results_filename = args.result_filename
