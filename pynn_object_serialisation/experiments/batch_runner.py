@@ -106,6 +106,9 @@ for network in args.models:
                 '--timestep', str(args.timestep),
                 '--t_stim', str(args.t_stim),
         ]
+
+        if args.reset_v:
+            call.append('--reset_v')
         print("CALL", call)
         log_calls.append((call, filename, curr_params))
         if (concurrently_active_processes % MAX_CONCURRENT_PROCESSES == 0

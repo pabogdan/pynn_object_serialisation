@@ -49,6 +49,11 @@ parser.add_argument('--timestep', type=float,
                     help='simulation time step',
                     default=DEFAULT_TIMESTEP)
 
+parser.add_argument('--reset_v',
+                    help='Reset voltage of all neurons in the network after '
+                         'each pattern presentation',
+                    action="store_true")
+
 parser.add_argument('--max_processes', type=int,
                     default=DEFAULT_MAX_CONCURRENT_PROCESSES,
                     dest='max_processes',
