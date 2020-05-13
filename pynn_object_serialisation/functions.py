@@ -180,7 +180,8 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
     total_no_synapses = 0
     max_synapses_per_neuron = 0
     no_afferents = {}
-    no_neurons = {}
+    all_neurons = {}
+    all_connections = {}
     print("Population reconstruction begins...")
     for pop_no in range(no_pops):
         pop_info = json_data['populations'][str(pop_no)]
@@ -221,7 +222,7 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
                 pop_cellparams[k] = replace_params[k]
 
         no_afferents[pop_info['label']] = 0
-        no_neurons[pop_info['label']] = pop_info['n_neurons']
+        all_neurons[pop_info['label']] = pop_info['n_neurons']
         total_no_neurons += pop_info['n_neurons']
         populations.append(
             sim.Population(
@@ -243,7 +244,7 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
         receptor_type = DEFAULT_RECEPTOR_TYPES[proj_info['receptor_type']]
         _type = "_exc" if receptor_type == "excitatory" else "_inh"
         conn_label = proj_info['pre_label'] + "_to_" + proj_info['post_label'] + _type
-        if proj_info['post_label'] not in no_neurons.keys():
+        if proj_info['post_label'] not in all_neurons.keys():
             print("Aborting the creation of proj", conn_label)
             continue
 
@@ -269,18 +270,20 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
               Style.RESET_ALL,
               "synapses")
         no_afferents[proj_info['post_label']] += number_of_synapses
-        projections.append(
-            sim.Projection(
-                populations[proj_info['pre_number']],  # pre population
-                populations[proj_info['post_number']],  # post population
-                pydoc.locate(proj_info['connector_type'])(_conn),  # connector
-                synapse_type=synapse_dynamics,
-                source=proj_info['source'],
-                receptor_type=DEFAULT_RECEPTOR_TYPES[proj_info['receptor_type']],
-                space=proj_info['space'],
-                label=conn_label
+        all_connections[conn_label] = _conn
+        if len(_conn) > 0:
+            projections.append(
+                sim.Projection(
+                    populations[proj_info['pre_number']],  # pre population
+                    populations[proj_info['post_number']],  # post population
+                    pydoc.locate(proj_info['connector_type'])(_conn),  # connector
+                    synapse_type=synapse_dynamics,
+                    source=proj_info['source'],
+                    receptor_type=DEFAULT_RECEPTOR_TYPES[proj_info['receptor_type']],
+                    space=proj_info['space'],
+                    label=conn_label
+                )
             )
-        )
 
     connectivity_data.close()
     print("Reconstruction complete!")
@@ -301,7 +304,7 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
             k,
             format(int(no_afferents[k]), ",")))
         print("\tthat is {:15.2f} synapses / neuron".format(
-            no_afferents[k] / no_neurons[k]))
+            no_afferents[k] / all_neurons[k]))
     print("=" * 80)
     return populations, projections, custom_params
 
@@ -424,7 +427,7 @@ def extract_parameters(filename, output_dir, output_type="npz"):
     projections = []
     populations = []
 
-    no_neurons = {}
+    all_neurons = {}
     total_no_neurons = 0
 
     # Load the data from disk
@@ -447,7 +450,7 @@ def extract_parameters(filename, output_dir, output_type="npz"):
         p_id = pop_info['id']
         pop_cellclass = pydoc.locate(pop_info['cellclass'])
         folderName = output_dir + '/' + pop_info['label']
-        no_neurons[pop_info['label']] = pop_info['n_neurons']
+        all_neurons[pop_info['label']] = pop_info['n_neurons']
         total_no_neurons += pop_info['n_neurons']
 
         if not os.path.exists(folderName):
@@ -476,7 +479,7 @@ def extract_parameters(filename, output_dir, output_type="npz"):
         receptor_type = DEFAULT_RECEPTOR_TYPES[proj_info['receptor_type']]
         _type = "_exc" if receptor_type == "excitatory" else "_inh"
         conn_label = proj_info['pre_label'] + "_to_" + proj_info['post_label'] + _type
-        if proj_info['post_label'] not in no_neurons.keys():
+        if proj_info['post_label'] not in all_neurons.keys():
             print("Aborting the creation of proj", conn_label)
             continue
         print("Outputting {}".format(conn_label))
