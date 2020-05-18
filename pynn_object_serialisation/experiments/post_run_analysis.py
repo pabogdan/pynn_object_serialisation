@@ -199,16 +199,25 @@ def post_run_analysis(filename, fig_folder, dark_background=False):
             # Retrieve results file
             curr_filename = slice_run
             try:
-                data = np.load(curr_filename, allow_pickle=True)
+                try:
+                    data = np.load(curr_filename, allow_pickle=True)
+                except FileNotFoundError:
+                    data = np.load(curr_filename + ".npz", allow_pickle=True)
+                    curr_filename += ".npz"
+
+                results = single_run_post_analysis(data)
+
+                # Aggregate results (should be safe on SANDS)
+                collated_results[slice_run] = results
             except FileNotFoundError:
-                data = np.load(curr_filename + ".npz", allow_pickle=True)
-                curr_filename += ".npz"
-
-            # TODO Loop over all available result files
-            results = single_run_post_analysis(data)
-
-            # TODO Aggregate results (should be safe on SANDS)
-            collated_results[slice_run] = results
+                collated_results[slice_run] = {
+                    'all_spikes': {},
+                    'true_labels': [],
+                    'predicated_labels': [],
+                    'num_classes': -1,
+                    'plot_order': []
+                }
+                traceback.print_exc()
 
         # Plotting results for ...
         print("=" * 80)
@@ -237,56 +246,63 @@ def post_run_analysis(filename, fig_folder, dark_background=False):
             print("-" * 80)
             # raster plot including ALL populations
             print("Plotting spiking raster plot for all populations")
-            f, axes = plt.subplots(len(all_spikes.keys()), 1,
-                                   figsize=(14, 20), sharex=True, dpi=400)
-            for index, pop in enumerate(plot_order):
-                curr_ax = axes[index]
-                # spike raster
-                curr_spikes = all_spikes[pop]
-                curr_filtered_spikes = curr_spikes[curr_spikes[:, 1] < 10000]
-                _times = curr_filtered_spikes[:, 1]
-                _ids = curr_filtered_spikes[:, 0]
-                curr_ax.scatter(_times,
-                                _ids,
-                                color=viridis_cmap(index / (n_plots + 1)),
-                                s=.5, rasterized=True)
-                curr_ax.set_title(use_display_name(pop))
-            plt.xlabel("Time (ms)")
-            # plt.suptitle((use_display_name(simulator)+"\n")
-            f.tight_layout()
-            save_figure(plt, os.path.join(sim_fig_folder,
-                                          "raster_plots_{}".format(
-                                              str(ntpath.basename(curr_run)))),
-                        extensions=['.png', '.pdf'])
-            plt.close(f)
+            no_pops = len(all_spikes.keys())
+            if no_pops > 0:
+                f, axes = plt.subplots(no_pops, 1,
+                                       figsize=(14, 20), sharex=True, dpi=400)
+                for index, pop in enumerate(plot_order):
+                    curr_ax = axes[index]
+                    # spike raster
+                    curr_spikes = all_spikes[pop]
+                    curr_filtered_spikes = curr_spikes[curr_spikes[:, 1] < 10000]
+                    _times = curr_filtered_spikes[:, 1]
+                    _ids = curr_filtered_spikes[:, 0]
+                    curr_ax.scatter(_times,
+                                    _ids,
+                                    color=viridis_cmap(index / (n_plots + 1)),
+                                    s=.5, rasterized=True)
+                    curr_ax.set_title(use_display_name(pop))
+                plt.xlabel("Time (ms)")
+                # plt.suptitle((use_display_name(simulator)+"\n")
+                f.tight_layout()
+                save_figure(plt, os.path.join(sim_fig_folder,
+                                              "raster_plots_{}".format(
+                                                  str(ntpath.basename(curr_run)))),
+                            extensions=['.png', '.pdf'])
+                plt.close(f)
+            else:
+                print(Fore.RED, "NO SPIKES FOR THIS RUN", Style.RESET_ALL)
         print("=" * 80)
         print("Plotting figures for", major_run)
         print("-" * 80)
 
-        combined_predicted_labels = np.asarray(combined_predicted_labels).ravel()
-        combined_real_labels = np.asarray(combined_real_labels).ravel()
+        try:
+            combined_predicted_labels = np.hstack(combined_predicted_labels)
+            combined_real_labels = np.hstack(combined_real_labels).ravel()
 
-        conf_mat = confusion_matrix(combined_real_labels, combined_predicted_labels, labels=range(num_classes))
-        conf_mat = conf_mat.astype('float') / conf_mat.sum(axis=1)
-        print(classification_report(combined_real_labels, combined_predicted_labels))
-        # Plot confusion matrix
-        fig_conn, ax1 = plt.subplots(1, 1, figsize=(9, 9), dpi=500)
+            conf_mat = confusion_matrix(combined_real_labels, combined_predicted_labels, labels=range(num_classes))
+            conf_mat = conf_mat.astype('float') / conf_mat.sum(axis=1)
+            print(classification_report(combined_real_labels, combined_predicted_labels))
+            # Plot confusion matrix
+            fig_conn, ax1 = plt.subplots(1, 1, figsize=(9, 9), dpi=500)
 
-        ff_conn_ax = ax1.matshow(conf_mat, vmin=0, vmax=1)
+            ff_conn_ax = ax1.matshow(conf_mat, vmin=0, vmax=1)
 
-        ax1.set_title("SNN Confusion matrix\n")
-        ax1.set_xlabel("Predicted label")
-        ax1.set_ylabel("True label")
+            ax1.set_title("SNN Confusion matrix\n")
+            ax1.set_xlabel("Predicted label")
+            ax1.set_ylabel("True label")
 
-        divider = make_axes_locatable(plt.gca())
-        cax = divider.append_axes("right", "5%", pad="3%")
-        cbar = plt.colorbar(ff_conn_ax, cax=cax)
-        cbar.set_label("Percentage")
+            divider = make_axes_locatable(plt.gca())
+            cax = divider.append_axes("right", "5%", pad="3%")
+            cbar = plt.colorbar(ff_conn_ax, cax=cax)
+            cbar.set_label("Percentage")
 
-        plt.tight_layout()
-        save_figure(plt, os.path.join(sim_fig_folder, "confusion_matrix"),
-                    extensions=['.png', '.pdf'])
-        plt.close(fig_conn)
+            plt.tight_layout()
+            save_figure(plt, os.path.join(sim_fig_folder, "confusion_matrix"),
+                        extensions=['.png', '.pdf'])
+            plt.close(fig_conn)
+        except:
+            traceback.print_exc()
 
 
 if __name__ == "__main__":
