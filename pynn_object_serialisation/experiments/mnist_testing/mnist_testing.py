@@ -70,19 +70,30 @@ input_params = {
     "starts": starts
 }
 
+print("Number of testing examples to use:", no_testing_examples)
+print("Min rate", np.min(rates))
+print("Max rate", np.max(rates))
+print("Mean rate", np.mean(rates))
+
 replace = None
 # produce parameter replacement dict
 output_v = []
+
+sim.setup(args.timestep,
+          args.timestep,
+          args.timestep,
+          time_scale_factor=args.timescale)
+
+sim.set_number_of_neurons_per_core(SpikeSourcePoissonVariable, 64)
+# sim.set_number_of_neurons_per_core(sim.SpikeSourcePoisson, 64)
+# sim.set_number_of_neurons_per_core(sim.IF_curr_exp, 64)
+
 populations, projections, extra_params = restore_simulator_from_file(
     sim, args.model,
     is_input_vrpss=True,
     vrpss_cellparams=input_params,
     replace_params=replace,
-    timestep=args.timestep
 )
-# sim.set_number_of_neurons_per_core(SpikeSourcePoissonVariable, 64)
-# sim.set_number_of_neurons_per_core(sim.SpikeSourcePoisson, 64)
-# sim.set_number_of_neurons_per_core(sim.IF_curr_exp, 64)
 # set_i_offsets(populations, runtime)
 
 for pop in populations[:]:

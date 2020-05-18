@@ -9,6 +9,7 @@ DEFAULT_FIGURE_DIR = 'figures/'
 
 DEFAULT_RATE_SCALING = 1000  # Hz
 DEFAULT_T_STIM = 200  # ms
+DEFAULT_TIMESCALE = None
 DEFAULT_TESTING_EXAMPLES = None
 
 parser = argparse.ArgumentParser(
@@ -36,6 +37,10 @@ parser.add_argument('--record_v',
                     help='record voltage for output neurons',
                     action="store_true")
 
+parser.add_argument('--timescale', type=int,
+                    help='timescale factor for the simulation',
+                    default=DEFAULT_TIMESCALE)
+
 parser.add_argument('--test_with_pss',
                     help='Test using only the Poisson Spike Source '
                          '(not variable)',
@@ -58,20 +63,8 @@ parser.add_argument('--curr_slice', type=int,
 parser.add_argument('--epochs', type=int,
                     help='number of epochs', default=epochs)
 
-parser.add_argument('--batch', type=int,
-                    help='batch size', default=batch_size)
-
-parser.add_argument('--optimizer', type=str,
-                    help='optimizer to use', default='sgd')
-
 parser.add_argument('--dataset', type=str,
                     help='dataset for training and testing', default='mnist')
-
-parser.add_argument('--activation', type=str,
-                    help='activation type', default='relu')
-
-parser.add_argument('--loss', type=str,
-                    help='loss function', default='mse')
 
 parser.add_argument('--suffix', type=str,
                     help='loss function', default=None)

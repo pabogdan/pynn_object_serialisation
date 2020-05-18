@@ -129,8 +129,8 @@ def intercept_simulator(sim, output_filename=None, cellparams=None,
 def restore_simulator_from_file(sim, filename, prune_level=1.,
                                 is_input_vrpss=False,
                                 vrpss_cellparams=None,
-                                replace_params=None, n_boards_required=None,
-                                time_scale_factor=None, first_n_layers=None,
+                                replace_params=None,
+                                first_n_layers=None,
                                 timestep=1.0
                                 ):
     replace_params = replace_params or {}
@@ -154,15 +154,7 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
     # (first_n_layers) or the total number of available populations
     no_pops = first_n_layers or len(json_data['populations'].keys())
     no_proj = len(json_data['projections'].keys())
-    # setup
-    setup_params = json_data['setup']
-    # TODO move setup outside into whatever experiment is run
 
-    sim.setup(timestep,
-              timestep,
-              timestep,
-              n_boards_required=n_boards_required,
-              time_scale_factor=time_scale_factor)
     extra_params = {}
     try:
         extra_params['json_custom_params'] = json_data['custom_params']
