@@ -228,7 +228,10 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
                                        prune_level=prune_level)
 
         # build synapse dynamics
-        synapse_dynamics = utils._build_synapse_info(sim, proj_info)
+        synapse_dynamics = utils._build_synapse_info(sim, proj_info, timestep)
+        if len(_conn) > 0 and _conn.shape[1] == 4:
+            _conn[:, 3] = timestep
+
         total_no_synapses += _conn.shape[0]
 
         post_n_neurons = \
