@@ -125,18 +125,19 @@ def intercept_simulator(sim, output_filename=None, cellparams=None,
         import sys
         sys.exit()
 
+# TODO remove redundant input_type args
 
 def restore_simulator_from_file(sim, filename, prune_level=1.,
                                 input_type=None,
                                 is_input_vrpss=False,
                                 vrpss_cellparams=None,
                                 ssa_cellparams=None,
-                                replace_params=None, n_boards_required=None,
-                                time_scale_factor=None, first_n_layers=None,
-                                replace_setup_params=None,
+                                replace_params=None,
+                                first_n_layers=None,
                                 timestep=1.0
                                 ):
     replace_params = replace_params or {}
+
     if is_input_vrpss:
         input_type = 'vrpss'
     if input_type != "vrpss" and vrpss_cellparams:
@@ -158,20 +159,6 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
     # (first_n_layers) or the total number of available populations
     no_pops = first_n_layers or len(json_data['populations'].keys())
     no_proj = len(json_data['projections'].keys())
-    # setup
-    setup_params = json_data['setup']
-    for key in replace_setup_params:
-        setup_params[key] = replace_setup_params[key]
-
-    #Just to fix min delay being too small.
-    if setup_params['min_delay']<setup_params['machine_time_step']:
-        setup_params['min_delay'] = setup_params['machine_time_step']/1000
-    # TODO move setup outside into whatever experiment is run
-    sim.setup(setup_params['machine_time_step'] / 1000.,
-              setup_params['min_delay'],
-              setup_params['max_delay'],
-              n_boards_required=n_boards_required,
-              time_scale_factor=time_scale_factor)
 
     extra_params = {}
     try:
@@ -386,7 +373,7 @@ def set_i_offsets(populations, new_runtime, old_runtime=1000):
     for population in populations:
         try:
             i_offset = population.get('i_offset')
-            population.set(i_offset=get_rescaled_biases(i_offset, new_runtime))
+            population.set(i_offset=get_rescaled_i_offset(i_offset, new_runtime))
         except Exception:
             pass
 
