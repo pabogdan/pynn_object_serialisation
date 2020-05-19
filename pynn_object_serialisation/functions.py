@@ -128,19 +128,22 @@ def intercept_simulator(sim, output_filename=None, cellparams=None,
 
 def restore_simulator_from_file(sim, filename, prune_level=1.,
                                 input_type=None,
+                                is_input_vrpss=False,
                                 vrpss_cellparams=None,
                                 ssa_cellparams=None,
                                 replace_params=None, n_boards_required=None,
                                 time_scale_factor=None, first_n_layers=None,
-                                replace_setup_params=None
+                                replace_setup_params=None,
+                                timestep=1.0
                                 ):
     replace_params = replace_params or {}
-
+    if is_input_vrpss:
+        input_type = 'vrpss'
     if input_type != "vrpss" and vrpss_cellparams:
         raise AttributeError("Undefined configuration. You are passing in "
                              "parameters for a Variable Rate Poisson Spike "
                              "Source, but you are not setting "
-                             "input_type='vrpss'")
+                             "is_input_vrpss=True or input_type='vrpss'")
     # Objects and parameters
     projections = []
     populations = []
@@ -170,10 +173,11 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
               n_boards_required=n_boards_required,
               time_scale_factor=time_scale_factor)
 
+    extra_params = {}
     try:
-        custom_params = json_data['custom_params']
-    except KeyError:
-        custom_params = {}
+        extra_params['json_custom_params'] = json_data['custom_params']
+    except:
+        pass
     # set up populations
     # Add reports here
     total_no_neurons = 0
@@ -253,7 +257,10 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
                                        prune_level=prune_level)
 
         # build synapse dynamics
-        synapse_dynamics = utils._build_synapse_info(sim, proj_info)
+        synapse_dynamics = utils._build_synapse_info(sim, proj_info, timestep)
+        if len(_conn) > 0 and _conn.shape[1] == 4:
+            _conn[:, 3] = timestep
+
         total_no_synapses += _conn.shape[0]
 
         post_n_neurons = \
@@ -269,6 +276,7 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
               _c, DEFAULT_RECEPTOR_TYPES[proj_info['receptor_type']],
               Style.RESET_ALL,
               "synapses")
+        # Storing projection info based on name of post-synaptic population
         no_afferents[proj_info['post_label']] += number_of_synapses
         all_connections[conn_label] = _conn
         if len(_conn) > 0:
@@ -306,7 +314,12 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
         print("\tthat is {:15.2f} synapses / neuron".format(
             no_afferents[k] / all_neurons[k]))
     print("=" * 80)
-    return populations, projections, custom_params
+
+    extra_params['all_neurons'] = all_neurons
+    extra_params['all_connections'] = all_connections
+    extra_params['json_dict'] = json_data
+
+    return populations, projections, extra_params
 
 
 def write_report(msg, value):

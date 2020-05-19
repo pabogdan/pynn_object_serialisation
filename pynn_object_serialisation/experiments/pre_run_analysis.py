@@ -4,7 +4,7 @@ from pynn_object_serialisation.functions import DEFAULT_RECEPTOR_TYPES
 from pynn_object_serialisation.experiments.analysis_common import *
 
 
-def network_statistics(filename, fig_folder, dark_background=False):
+def pre_run_analysis(filename, fig_folder, dark_background=False):
     if dark_background:
         plt.style.use('dark_background')
     print("=" * 80)
@@ -35,7 +35,10 @@ def network_statistics(filename, fig_folder, dark_background=False):
     total_no_neurons = 0
     total_no_synapses = 0
     max_synapses_per_neuron = 0
-    no_afferents = {}
+    all_afferents = {}
+    afferents_per_syn_type = {}
+    all_efferents = {}
+    efferents_per_syn_type = {}
     all_neurons = {}
     all_connections = {}
     conn_py_post = {}
@@ -45,9 +48,10 @@ def network_statistics(filename, fig_folder, dark_background=False):
         pop_info = json_data['populations'][str(pop_no)]
         p_id = pop_info['id']
         label = pop_info['label']
-        no_afferents[label] = 0
         layer_order.append(label)
         all_neurons[label] = pop_info['n_neurons']
+        all_afferents[label] = np.zeros(pop_info['n_neurons'], dtype=np.int)
+        all_efferents[label] = np.zeros(pop_info['n_neurons'], dtype=np.int)
         conn_py_post[label] = [[], []]
         total_no_neurons += pop_info['n_neurons']
 
@@ -65,6 +69,8 @@ def network_statistics(filename, fig_folder, dark_background=False):
 
         post_n_neurons = \
             json_data['populations'][str(proj_info['post_number'])]['n_neurons']
+        pre_n_neurons = \
+            json_data['populations'][str(proj_info['pre_number'])]['n_neurons']
 
         number_of_synapses = _conn.shape[0]
         max_synapses_per_neuron = max(max_synapses_per_neuron,
@@ -74,10 +80,14 @@ def network_statistics(filename, fig_folder, dark_background=False):
         all_connections[conn_label + syn_type] = _conn
         conn_py_post[proj_info['post_label']][proj_info['receptor_type']] = _conn
         projection_order.append(conn_label + syn_type)
-        no_afferents[proj_info['post_label']] += number_of_synapses
-    for k, v in no_afferents.items():
-        if v == 0:
-            del conn_py_post[k]
+        for pre_nid in range(pre_n_neurons):
+            fan_out_for_the_current_conn = np.count_nonzero([_conn[:, 0].astype(int) == pre_nid])
+            all_efferents[proj_info['pre_label']][pre_nid] += fan_out_for_the_current_conn
+        for post_nid in range(post_n_neurons):
+            fan_in_for_the_current_conn = np.count_nonzero([_conn[:, 1].astype(int) == post_nid])
+            all_afferents[proj_info['post_label']][post_nid] += fan_in_for_the_current_conn
+
+
     print("=" * 80)
     print("Reports")
     print("-" * 80)
@@ -91,19 +101,46 @@ def network_statistics(filename, fig_folder, dark_background=False):
     print("-" * 80)
     print("Number of afferents (exc + inh)")
     for k in layer_order:
+        tot_fanin_for_k = int(np.nansum(all_afferents[k]))
+        tot_fanout_for_k = int(np.nansum(all_efferents[k]))
+        if tot_fanin_for_k > 0:
+            max_syn_for_k = int(np.nanmax(all_afferents[k]))
+            argmax_syn_for_k = int(np.nanargmax(all_afferents[k]))
+
+        else:
+            max_syn_for_k = np.nan
+            argmax_syn_for_k = np.nan
+
+        if tot_fanout_for_k > 0:
+            max_fanout_for_k = int(np.nanmax(all_efferents[k]))
+            argmax_fanout_for_k = int(np.nanargmax(all_efferents[k]))
+        else:
+            max_fanout_for_k = np.nan
+            argmax_fanout_for_k = np.nan
+
         print("Total afferents for {:35} : {:25}".format(
             k,
-            format(int(no_afferents[k]), ",")))
+            format(tot_fanin_for_k, ",")))
         print("\tthat is {:15.2f} synapses / neuron".format(
-            no_afferents[k] / all_neurons[k]))
+            tot_fanin_for_k / all_neurons[k]))
+        print("\tmax fan-in  ={:10} synapses for neuron {:10}".format(
+            max_syn_for_k, argmax_syn_for_k)
+        )
+        # print("Total afferents for {:35} : {:25}".format(
+        #     k,
+        #     format(tot_fanin_for_k, ",")))
+        print("\tmax fan-out ={:10} synapses for neuron {:10}".format(
+            max_fanout_for_k, argmax_fanout_for_k)
+        )
     # Write in LaTeX mode
-    print("<LaTeX mode>")
-    for k in layer_order:
-        print("{:35} & {:25} & {:15.2f} synapses / neuron".format(
-            k,
-            format(int(no_afferents[k]), ","),
-            no_afferents[k] / all_neurons[k]))
-    print("</LaTeX mode>")
+    # print("<LaTeX mode>")
+    # for k in layer_order:
+    #     tot_fanin_for_k = np.sum(all_afferents[k])
+    #     print("{:35} & {:25} & {:15.2f} synapses / neuron".format(
+    #         k,
+    #         format(int(tot_fanin_for_k), ","),
+    #         tot_fanin_for_k / all_neurons[k]))
+    # print("</LaTeX mode>")
     # report mean and std for each connection
     for proj_k in projection_order:
         # Report range of source, target, weight, delay
@@ -136,15 +173,27 @@ def network_statistics(filename, fig_folder, dark_background=False):
               "std {:8.4f}".format(
             np.mean(weights), scipy.stats.mode(weights).mode[0], np.std(weights)
         ))
+        print("\t # connections {:10}".format(_conn.shape[0]))
     print("=" * 80)
     print("Plots")
     print("-" * 80)
     # TODO add plots
-    non_input_all_neurons = all_neurons
+    non_input_all_neurons = copy.deepcopy(all_neurons)
     del non_input_all_neurons['InputLayer']
-    plot_weight_barplot(all_neurons, conn_py_post,
+    # del all_afferents['InputLayer']
+    plot_weight_barplot(non_input_all_neurons, conn_py_post,
                         layer_order=layer_order,
                         current_fig_folder=current_fig_folder)
+
+    # Plot fan-ins
+    plot_hist(all_neurons, all_afferents, "afferents_in_network",
+              layer_order=layer_order[1:],
+              current_fig_folder=current_fig_folder)
+
+    # Plot fan-outs
+    plot_hist(all_neurons, all_efferents, "efferents_in_network",
+              layer_order=layer_order[:-1],
+              current_fig_folder=current_fig_folder)
 
 
 if __name__ == "__main__":
@@ -152,8 +201,5 @@ if __name__ == "__main__":
 
     if analysis_args.input and len(analysis_args.input) > 0:
         for in_file in analysis_args.input:
-            # try:
-            network_statistics(in_file, analysis_args.figures_dir,
-                               dark_background=analysis_args.dark_background)
-            # except:
-            #     traceback.print_exc()
+            pre_run_analysis(in_file, analysis_args.figures_dir,
+                             dark_background=analysis_args.dark_background)

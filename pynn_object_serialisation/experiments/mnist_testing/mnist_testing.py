@@ -1,222 +1,246 @@
 # import keras dataset to deal with our common use cases
-from keras.datasets import mnist, cifar10, cifar100
-import keras
-from pynn_object_serialisation.OutputDataProcessor import OutputDataProcessor
-
+from keras.datasets import mnist
 # usual sPyNNaker imports
-
+from pynn_object_serialisation.experiments.mobilenet_testing.utils import \
+    retrieve_git_commit
+from pynn_object_serialisation.experiments.post_run_analysis import post_run_analysis
 try:
     import spynnaker8 as sim
 except:
     import pyNN.spiNNaker as sim
-import matplotlib.pyplot as plt
 from pynn_object_serialisation.functions import \
     restore_simulator_from_file, set_i_offsets
 from spynnaker8.extra_models import SpikeSourcePoissonVariable
-from multiprocessing.pool import Pool
-import multiprocessing
-import itertools
 import numpy as np
+import pylab as plt
 import os
-import sys
+import traceback
 
 
-class serialised_snn:
-    """ This class represented a serialised snn model and gives the possibility to 
-    run this model serially and in parallel """
 
-    def __init__(self, args):
-        self.model_path = args.model
-        self.testing_examples = args.testing_examples
-        self.parallel_processes = args.number_of_threads
-        self.t_stim = args.t_stim
-        self.runtime = self.t_stim * self.testing_examples
-        self.load_dataset()
-        self.result_dir = args.result_dir
-        self.base_filename_results = args.result_filename
-        self.input_params = {}
-        self.record_v = args.record_v
-        self.start_index = False
-        self.time_scale_factor = args.time_scale_factor
-        self.results = []
-        self.N_layer = self.x_test.shape[1]  # number of neurons in input population
-        self.chunk_size = self.testing_examples // self.parallel_processes
-        # TODO fix for case when self.testing_examples%self.parallel_processes != 0
 
-    def load_model(self):
-        """Loads model from model path"""
+def test_converted_network(path_to_network, t_stim, rate_scaling=1000,
+                           no_slices=None, curr_slice=None,
+                           testing_examples=None, result_filename=None,
+                           result_dir="results",
+                           figures_dir="figures", suffix=None,
+                           timestep=1.0,
+                           timescale=None, reset_v=False, record_v=False):
+    # Check parameters passed in from argparser
+    if testing_examples and (no_slices or curr_slice):
+        raise AttributeError("Can't received both number of testing examples and "
+                             "slice information.")
 
-        self.generate_VRPSS()
-        replace = None
+    # Record SCRIPT start time (wall clock)
+    start_time = plt.datetime.datetime.now()
 
-        self.populations, self.projections, self.custom_params = restore_simulator_from_file(
-            sim, self.model_path,
-            input_type='vrpss',
-            vrpss_cellparams=self.input_params,
-            replace_params=replace,
-            time_scale_factor=args.time_scale_factor)
-        self.dt = sim.get_time_step()
-        old_runtime = self.custom_params['runtime'] if 'runtime' in self.custom_params else None
-        min_delay = sim.get_min_delay()
-        max_delay = sim.get_max_delay()
-        sim.set_number_of_neurons_per_core(SpikeSourcePoissonVariable, 16)
-        sim.set_number_of_neurons_per_core(sim.SpikeSourcePoisson, 16)
-        sim.set_number_of_neurons_per_core(sim.IF_curr_exp, 64)
-        set_i_offsets(self.populations, self.runtime, old_runtime=old_runtime)
+    # Checking directory structure exists
+    if not os.path.isdir(result_dir) and not os.path.exists(result_dir):
+        os.mkdir(result_dir)
 
-    def load_dataset(self):
-        """ Loads in mnist dataset """
-        (x_train, y_train), (x_test, y_test) = mnist.load_data()
-        # reshape input to flatten data
-        self.y_train = y_train
-        self.y_test = y_test
-        self.x_train = x_train.reshape(x_train.shape[0], np.prod(x_train.shape[1:]))
-        self.x_test = x_test.reshape(x_test.shape[0], np.prod(x_test.shape[1:]))
+    N_layer = 28 ** 2  # number of neurons in each population
+    t_stim = t_stim
+    (x_train, y_train), (full_x_test, full_y_test) = mnist.load_data()
+    # reshape input to flatten data
+    # x_train = x_train.reshape(x_train.shape[0], np.prod(x_train.shape[1:]))
+    full_x_test = full_x_test.reshape(full_x_test.shape[0], np.prod(full_x_test.shape[1:]))
 
-    def generate_VRPSS(self):
-        """Generates variable rate poisson spike source"""
-
-        runtime = self.chunk_size * self.t_stim
-        range_of_slots = np.arange(self.chunk_size)
-        starts = np.ones((self.N_layer, self.chunk_size)) * (range_of_slots * self.t_stim)
-        durations = np.ones((self.N_layer, self.chunk_size)) * self.t_stim
-
-        rates = self.x_test[self.start_index:self.start_index + self.chunk_size, :].T
-
-        # scaling rates
-        _0_to_1_rates = rates / float(np.max(rates))
-        rates = _0_to_1_rates * args.rate_scaling
-
-        self.input_params = {
-            "rates": rates,
-            "durations": durations,
-            "starts": starts
-        }
-
-    def set_record_output(self):
-        self.output_v = []
-        self.spikes_dict = {}
-        self.neo_spikes_dict = {}
-
-        for pop in self.populations[:]:
-            pop.record("spikes")
-        if self.record_v:
-            self.populations[-1].record("v")
-
-    def get_output(self):
-        """Gets the desired outputs from SpiNNaker at end of sim and saves it"""
-
-        for pop in self.populations[:]:
-            self.spikes_dict[pop.label] = pop.spinnaker_get_data('spikes')
-        if args.record_v:
-            self.output_v = self.populations[-1].spinnaker_get_data('v')
-
-        if self.start_index:
-            filename = self.base_filename_results + '_' + self.start_index
+    if not (no_slices or curr_slice):
+        if testing_examples:
+            no_testing_examples = testing_examples
         else:
-            from datetime import datetime
-            now = datetime.now()
-            filename = self.base_filename_results + "_" + now.strftime("_%H%M%S_%d%m%Y")
+            no_testing_examples = full_x_test.shape[0]
+        testing_examples = np.arange(no_testing_examples)
+    else:
+        no_testing_examples = full_x_test.shape[0] // no_slices
+        testing_examples = \
+            np.arange(full_x_test.shape[0])[curr_slice * no_testing_examples:
+                                       (curr_slice + 1) * no_testing_examples]
 
-        np.savez_compressed(os.path.join(self.result_dir, filename), \
-                            output_v=self.output_v, \
-                            neo_spikes_dict=self.neo_spikes_dict, \
-                            y_test=self.y_test, \
-                            N_layer=self.N_layer, \
-                            t_stim=self.t_stim, \
-                            runtime=self.runtime, \
-                            sim_time=self.runtime, \
-                            dt=self.dt, \
-                            **self.spikes_dict)
-        sim.end()
+    runtime = no_testing_examples * t_stim
+    number_of_slots = int(runtime / t_stim)
+    range_of_slots = np.arange(number_of_slots)
+    starts = np.ones((N_layer, number_of_slots)) * (range_of_slots * t_stim)
+    durations = np.ones((N_layer, number_of_slots)) * t_stim
+    rates = full_x_test[testing_examples, :].T
+    y_test = full_y_test[testing_examples]
 
-    def simulate(self):
-        """A wrapper around sim.run to do reset between presentations"""
 
-        def reset_membrane_voltage():
-            for population in self.populations[1:]:
-                population.set_initial_value(variable="v", value=0)
+    # scaling rates
+    _0_to_1_rates = rates / float(np.max(rates))
+    rates = _0_to_1_rates * rate_scaling
 
-        for i in range(self.testing_examples):
-            sim.run(self.t_stim, start_index=self.start_index)
-            reset_membrane_voltage()
+    input_params = {
+        "rates": rates,
+        "durations": durations,
+        "starts": starts
+    }
 
-    def in_parallel(self, func):
-        """ Decorator to run function in parallel """
+    print("Number of testing examples to use:", no_testing_examples)
+    print("Min rate", np.min(rates))
+    print("Max rate", np.max(rates))
+    print("Mean rate", np.mean(rates))
 
-        def init_worker():
-            current = multiprocessing.current_process()
-            print('Started {}'.format(current))
-            if not os.path.exists('errorlog'):
-                os.makedirs('errorlog')
+    replace = None
+    # produce parameter replacement dict
+    output_v = []
 
-            f_name = "errorlog/" + current.name + "_stdout.txt"
-            g_name = "errorlog/" + current.name + "_stderror.txt"
-            f = open(f_name, 'w')
-            g = open(g_name, 'w')
-            # old_stdout = sys.stdout
-            # old_stderr = sys.stderr
-            sys.stdout = f
-            sys.stderr = g
+    sim.setup(timestep,
+              timestep,
+              timestep,
+              time_scale_factor=timescale)
 
-        def inner(self):
-            # Make a pool
-            p = Pool(initializer=init_worker, processes=self.parallel_processes)
-            # Run the pool
-            p.starmap(func, zip(self, list(range(0, self.testing_examples, self.chunk_size))))
-            return
+    sim.set_number_of_neurons_per_core(SpikeSourcePoissonVariable, 32)
+    # sim.set_number_of_neurons_per_core(sim.SpikeSourcePoisson, 64)
+    # sim.set_number_of_neurons_per_core(sim.IF_curr_exp, 64)
 
-        return inner
+    populations, projections, extra_params = restore_simulator_from_file(
+        sim, path_to_network,
+        is_input_vrpss=True,
+        vrpss_cellparams=input_params,
+        replace_params=replace,
+    )
+    # set_i_offsets(populations, runtime)
 
-    def run(self, start_index=0):
+    for pop in populations[:]:
+        pop.record("spikes")
+    if record_v:
+        populations[-1].record("v")
+    spikes_dict = {}
+    neo_spikes_dict = {}
+    current_error = None
+    final_connectivity = {}
 
-        self.start_index = start_index
-        # setup results directory
-        if not os.path.isdir(self.result_dir) and not os.path.exists(self.result_dir):
-            os.mkdir(self.result_dir)
-
-        # restore sim from file
-        self.load_model()
-
-        # set variables
-        self.set_record_output()
-
-        self.simulate()
-
-        # collect results
-        self.get_output()
-
-        sim.end()
-
-    def parallel_run(self):
-        return self.in_parallel(self.run)()
-
-    def get_results(self):
-        # check for result dir and results files
-        if os.path.isdir(self.result_dir) and len(os.listdir(self.result_dir)) > 0 and not args.force_resim:
-            pass
-        elif self.parallel_processes > 1:
-            self.parallel_run()
+    sim_start_time = plt.datetime.datetime.now()
+    try:
+        if not reset_v:
+            sim.run(runtime)
         else:
-            self.run()
-        for filename in os.listdir(self.result_dir):
-            print(filename)
-            self.results.append(OutputDataProcessor(self.result_dir + '/' + filename))
+            run_duration = t_stim  # ms
+            no_runs = runtime // run_duration
+            for curr_run_number in range(no_runs):
+                print("RUN NUMBER", curr_run_number, "STARTED")
+                sim.run(run_duration)  # ms
+                for pop in populations[1:]:
+                    pop.set_initial_value("v", 0)
+                print("RUN NUMBER", curr_run_number, "COMPLETED")
+    except Exception as e:
+        print("An exception occurred during execution!")
+        traceback.print_exc()
+        current_error = e
 
-    def get_total_accuracy(self):
-        import pdb;
-        pdb.set_trace()
-        self.total_accuracy = np.mean([proc.get_accuracy() for proc in self.results])
+    # Compute time taken to reach this point
+    end_time = plt.datetime.datetime.now()
+    total_time = end_time - start_time
+    sim_total_time = end_time - sim_start_time
 
-    def main(self):
-        self.get_results()
-        self.get_total_accuracy()
-        print(self.total_accuracy)
+
+
+    for pop in populations[:]:
+        spikes_dict[pop.label] = pop.spinnaker_get_data('spikes')
+    for pop in populations:
+        # neo_spikes_dict[pop.label] = pop.get_data('spikes')
+        neo_spikes_dict[pop.label] = []
+    # the following takes more time than spinnaker_get_data
+    # for pop in populations[:]:
+    #     neo_spikes_dict[pop.label] = pop.get_data('spikes')
+    if record_v:
+        output_v = populations[-1].spinnaker_get_data('v')
+    # save results
+
+
+    try:
+        for proj in projections:
+            try:
+                final_connectivity[proj.label] = \
+                    np.array(proj.get(('weight', 'delay'),
+                                      format="list")._get_data_items())
+            except AttributeError as ae:
+                print("Careful! Something happened when retrieving the "
+                      "connectivity:", ae,
+                      "\nRetrying using standard PyNN syntax...")
+                final_connectivity[proj.label] = \
+                    np.array(proj.get(('weight', 'delay'), format="list"))
+            except TypeError as te:
+                print("Connectivity is None (", te,
+                      ") for connection", proj.label)
+                print("Connectivity as empty array.")
+                final_connectivity[proj.label] = np.array([])
+    except:
+        traceback.print_exc()
+        print("Couldn't retrieve connectivity.")
+
+
+    if result_filename:
+        results_filename = result_filename
+    else:
+        results_filename = "mnist_results"
+        if suffix:
+            results_filename += suffix
+        else:
+            now = plt.datetime.datetime.now()
+            results_filename += "_" + now.strftime("_%H%M%S_%d%m%Y")
+
+
+    # Retrieve simulation parameters for provenance tracking and debugging purposes
+    sim_params = {
+        "argparser": vars(args),
+        "git_hash": retrieve_git_commit(),
+        "run_end_time": end_time.strftime("%H:%M:%S_%d/%m/%Y"),
+        "wall_clock_script_run_time": str(total_time),
+        "wall_clock_sim_run_time": str(sim_total_time),
+    }
+
+    # TODO Retrieve original connectivity and JSON and store here.
+    results_file = os.path.join(result_dir, results_filename)
+    np.savez_compressed(results_file,
+                        output_v=output_v,
+                        neo_spikes_dict=neo_spikes_dict,
+                        all_spikes=spikes_dict,
+                        all_neurons=extra_params['all_neurons'],
+                        testing_examples=testing_examples,
+                        no_testing_examples=no_testing_examples,
+                        num_classes=10,
+                        y_test=y_test,
+                        input_params=input_params,
+                        input_size=N_layer,
+                        simtime=runtime,
+                        sim_params=sim_params,
+                        final_connectivity=final_connectivity,
+                        init_connectivity=extra_params['all_connections'],
+                        extra_params=extra_params,
+                        current_error=current_error)
+    sim.end()
+    # Analysis time!
+    post_run_analysis(filename=results_file, fig_folder=figures_dir)
+
+    # Report time taken
+    print("Results stored in  -- " + results_filename)
+
+    # Report time taken
+    print("Total time elapsed -- " + str(total_time))
+    return current_error
 
 
 if __name__ == "__main__":
-    import mnist_argparser
-
-    args = mnist_argparser.main()
-    this = serialised_snn(args)
-    this.main()
+    from pynn_object_serialisation.experiments.mnist_testing.mnist_argparser import args
+    test_converted_network(path_to_network=args.model,
+                           t_stim=args.t_stim,
+                           rate_scaling=args.rate_scaling,
+                           # Data slicing
+                           no_slices=args.no_slices,
+                           curr_slice=args.curr_slice,
+                           testing_examples=args.testing_examples,
+                           # Output names and folders
+                           figures_dir=args.figures_dir,
+                           result_filename=args.result_filename,
+                           result_dir=args.result_dir,
+                           suffix=args.suffix,
+                           # Simualtion parameters
+                           timescale=args.timescale,
+                           timestep=args.timestep,
+                           # Mode selection
+                           reset_v=args.reset_v,
+                           # Recordings
+                           record_v=args.record_v
+                           )

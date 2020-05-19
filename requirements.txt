@@ -9,3 +9,4 @@ argparse
 pillow
 colorama
 brian2
+scikit-learn
