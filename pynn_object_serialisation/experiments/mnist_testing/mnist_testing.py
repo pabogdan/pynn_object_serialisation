@@ -17,7 +17,7 @@ import os
 import traceback
 
 
-
+# TODO Merge this file with the parallel version.
 
 def test_converted_network(path_to_network, t_stim, rate_scaling=1000,
                            no_slices=None, curr_slice=None,
