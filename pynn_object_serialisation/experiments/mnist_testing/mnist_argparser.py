@@ -91,8 +91,8 @@ parser.add_argument('--chunk_size', type=int,
                     default=DEFAULT_CHUNK_SIZE)
 
 parser.add_argument('--number_of_processes', type=int,
-                    help ='the number of threads to run in parallel',
-                    default = DEFAULT_NUMBER_OF_PROCESSES)
+                    help='the number of processes to run in parallel',
+                    default=DEFAULT_NUMBER_OF_PROCESSES)
 
 parser.add_argument('--figures_dir', type=str,
                     help='directory into which to save figures',
@@ -102,12 +102,8 @@ parser.add_argument('--time_scale_factor', type=float,
                     help='the slowdown factor for the simulation',
                     default=DEFAULT_TIME_SCALE_FACTOR)
 
-parser.add_argument('--force_resim', type=bool,
+parser.add_argument('--force_resim',
                     help='should present results in result directory be ignored and overwritten?',
                     action="store_true")
 
-def main():
-    return parser.parse_args()
-
-if __name__ == "__main__":
-    main()
+args = parser.parse_args()
