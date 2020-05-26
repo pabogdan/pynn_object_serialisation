@@ -10,9 +10,8 @@ DEFAULT_FIGURE_DIR = 'figures/'
 DEFAULT_RESULT_FILENAME = "results"
 DEFAULT_RATE_SCALING = 1000  # Hz
 DEFAULT_T_STIM = 200  # ms
-DEFAULT_TIMESCALE = None
-DEFAULT_TESTING_EXAMPLES = None
-DEFAULT_CHUNK_SIZE = 100
+DEFAULT_TESTING_EXAMPLES = 1
+DEFAULT_CHUNK_SIZE = 1
 DEFAULT_NUMBER_OF_PROCESSES = 1
 DEFAULT_TIME_SCALE_FACTOR = 100
 DEFAULT_TIMESTEP = 0.1
@@ -41,10 +40,6 @@ parser.add_argument('--reset_v',
 parser.add_argument('--record_v',
                     help='record voltage for output neurons',
                     action="store_true")
-
-parser.add_argument('--timescale', type=int,
-                    help='timescale factor for the simulation',
-                    default=DEFAULT_TIMESCALE)
 
 parser.add_argument('--test_with_pss',
                     help='Test using only the Poisson Spike Source '
