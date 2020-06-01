@@ -101,4 +101,8 @@ parser.add_argument('--force_resim',
                     help='should present results in result directory be ignored and overwritten?',
                     action="store_true")
 
+parser.add_argument('--retrieve_connectivity',
+                    help='Should we retrieve the connectivity from SpiNNaker?',
+                    action="store_true")
+
 args = parser.parse_args()

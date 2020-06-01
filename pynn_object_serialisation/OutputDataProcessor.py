@@ -5,7 +5,7 @@ class OutputDataProcessor():
     ''' A class to represent the output of a serialised model and to
     alllow for easier processing.
     '''
-
+    #TODO fix this to take variables from serialised argparser
     def __init__(self, path):
         self.data = np.load(path, allow_pickle=True)
         self.spikes_dict = self.reconstruct_spikes_dict()
@@ -15,7 +15,7 @@ class OutputDataProcessor():
         self.output_layer_name = self.layer_names[-1]
         self.y_test = self.data['y_test']
         self.t_stim = self.data['t_stim']
-        self.runtime = int(self.data['runtime'])
+        self.simtime = int(self.data['simtime'])
         self.N_layer = int(self.data['N_layer'])
         self.set_dt()
         self.neo_object = self.data['neo_spikes_dict']
@@ -26,8 +26,8 @@ class OutputDataProcessor():
         self.layer_shapes = self.get_layer_shapes()
         self.input_spikes = self.spikes_dict[self.input_layer_name]
         self.output_spikes = self.spikes_dict[self.output_layer_name]
-        self.number_of_examples = self.runtime // self.t_stim
-        self.y_test = np.array(self.data['y_test'][:self.number_of_examples], dtype=np.int8)
+        self.testing_examples = self.data['testing_examples']
+        self.y_test = np.array(self.data['y_test'][:self.testing_examples], dtype=np.int8)
         if len(self.y_test.shape) >1 and\
                                         (self.y_test.shape[-1] == self.layer_shapes[-1][0] or\
                                         self.y_test.shape[0] == self.layer_shapes[-1][0]):
@@ -45,12 +45,12 @@ class OutputDataProcessor():
 
     def summary(self):
         print(self.layer_names)
-        print(self.number_of_examples)
+        print(self.testing_examples)
 
     def get_accuracy(self):
         import numpy as np 
-        correct_count = np.count_nonzero(self.y_test[:self.number_of_examples] == self.y_pred)
-        return correct_count /self.number_of_examples
+        correct_count = np.count_nonzero(self.y_test[:self.testing_examples] == self.y_pred)
+        return correct_count /self.testing_examples
 
     
     def get_layer_shapes(self):
@@ -93,8 +93,8 @@ class OutputDataProcessor():
     def get_bounds(self, bin_number):
         lower_end_bin_time = bin_number * self.t_stim + self.delay
         higher_end_bin_time = (bin_number + 1) * self.t_stim + self.delay
-        if higher_end_bin_time > self.runtime:
-            higher_end_bin_time = self.runtime
+        if higher_end_bin_time > self.simtime:
+            higher_end_bin_time = self.simtime
             #print('Final bin cut off.')
         return lower_end_bin_time, higher_end_bin_time
 
@@ -150,16 +150,16 @@ class OutputDataProcessor():
             return -1
 
     def get_batch_predictions(self):
-        y_pred = np.ones(self.number_of_examples) * (-1)
-        for bin_number in range(self.number_of_examples):
+        y_pred = np.ones(self.testing_examples) * (-1)
+        for bin_number in range(self.testing_examples):
             y_pred[bin_number] = self.get_prediction(
                 bin_number, self.output_layer_name)
         return y_pred
 
     def plot_output(self, bin_number):
-        if bin_number > self.number_of_examples: 
+        if bin_number > self.testing_examples:
             raise Exception('bin_number greater than number_of_examples')
-            bin_number = self.number_of_examples-1
+            bin_number = self.testing_examples - 1
         output_spikes = self.get_counts(bin_number, self.output_layer_name, 10)
         if hasattr(self, 'label_names'):
             label_names = [name.decode('utf-8') for name in self.label_names]
@@ -167,9 +167,9 @@ class OutputDataProcessor():
         plt.xticks(rotation=90)
 
     def get_accuracy(self):
-        actual_test_labels = self.y_test[:self.number_of_examples].ravel()
+        actual_test_labels = self.y_test[:self.testing_examples].ravel()
         y_pred = self.get_batch_predictions()
-        return np.count_nonzero(y_pred==actual_test_labels)/float(self.number_of_examples)
+        return np.count_nonzero(y_pred==actual_test_labels)/float(self.testing_examples)
 
     def bin_summary(self, bin_number):
         self.plot_output(bin_number)

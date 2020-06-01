@@ -73,7 +73,7 @@ def run(args, start_index):
     x_test = x_test.reshape(x_test.shape[0], np.prod(x_test.shape[1:]))
 
     testing_examples = args.chunk_size
-    runtime = testing_examples * t_stim
+    simtime = testing_examples * t_stim
     range_of_slots = np.arange(testing_examples)
     starts = np.ones((N_layer, testing_examples)) * (range_of_slots * t_stim)
     durations = np.ones((N_layer, testing_examples)) * t_stim
@@ -120,9 +120,9 @@ def run(args, start_index):
         vrpss_cellparams=input_params,
         replace_params=replace)
 
-    old_runtime = extra_params['runtime'] if 'runtime' in extra_params else None
+    old_runtime = extra_params['simtime'] if 'simtime' in extra_params else None
     print("Setting i_offsets...")
-    set_i_offsets(populations, runtime, old_runtime=old_runtime)
+    set_i_offsets(populations, simtime, old_runtime=old_runtime)
 
     spikes_dict = {}
     neo_spikes_dict = {}
@@ -130,6 +130,7 @@ def run(args, start_index):
     final_connectivity = {}
 
     def reset_membrane_voltage():
+        #This doesn't work see SpyNNaker8 GitHub issue #331 use set_initial_value branches
         for population in populations[1:]:
             population.set_initial_value(variable="v", value=0)
         return
@@ -141,11 +142,9 @@ def run(args, start_index):
 
     sim_start_time = plt.datetime.datetime.now()
     if not args.reset_v:
-        sim.run(runtime)
+        sim.run(simtime)
 
     for i in range(args.chunk_size):
-        # TODO add a lower level of retry that doesn't need to reload model.
-        # TODO find out why the following print doesn't print.
         print('Presenting example {}/{}'.format(start_index + i, testing_examples))
         sim.run(t_stim)
         reset_membrane_voltage()
@@ -160,25 +159,27 @@ def run(args, start_index):
     if args.record_v:
         output_v = populations[-1].spinnaker_get_data('v')
 
-    try:
-        for proj in projections:
-            try:
-                final_connectivity[proj.label] = \
-                    np.array(proj.get(('weight', 'delay'), format="list")._get_data_items())
-            except AttributeError as ae:
-                print("Careful! Something happened when retrieving the "
-                      "connectivity:", ae,
-                      "\nRetrying using standard PyNN syntax...")
-                final_connectivity[proj.label] = \
-                    np.array(proj.get(('weight', 'delay'), format="list"))
-            except TypeError as te:
-                print("Connectivity is None (", te,
-                      ") for connection", proj.label)
-                print("Connectivity as empty array.")
-                final_connectivity[proj.label] = np.array([])
-    except:
-        traceback.print_exc()
-        print("Couldn't retrieve connectivity.")
+    #The following can take a long time and so is added through a flag
+    if args.retrieve_connectivity:
+        try:
+            for proj in projections:
+                try:
+                    final_connectivity[proj.label] = \
+                        np.array(proj.get(('weight', 'delay'), format="list")._get_data_items())
+                except AttributeError as ae:
+                    print("Careful! Something happened when retrieving the "
+                          "connectivity:", ae,
+                          "\nRetrying using standard PyNN syntax...")
+                    final_connectivity[proj.label] = \
+                        np.array(proj.get(('weight', 'delay'), format="list"))
+                except TypeError as te:
+                    print("Connectivity is None (", te,
+                          ") for connection", proj.label)
+                    print("Connectivity as empty array.")
+                    final_connectivity[proj.label] = np.array([])
+        except:
+            traceback.print_exc()
+            print("Couldn't retrieve connectivity.")
 
 
     if args.result_filename:
@@ -206,12 +207,14 @@ def run(args, start_index):
                         all_spikes=spikes_dict,
                         all_neurons=extra_params['all_neurons'],
                         testing_examples=testing_examples,
+                        N_layer=N_layer,
                         no_testing_examples=testing_examples,
                         num_classes=10,
                         y_test=y_test,
                         input_params=input_params,
                         input_size=N_layer,
-                        simtime=runtime,
+                        simtime=simtime,
+                        t_stim=t_stim,
                         sim_params=sim_params,
                         final_connectivity=final_connectivity,
                         init_connectivity=extra_params['all_connections'],
@@ -219,7 +222,6 @@ def run(args, start_index):
                         current_error=current_error)
     sim.end()
 
-    # TODO move analysis into another parallel loop
     # Analysis time!
     post_run_analysis(filename=results_file, fig_folder=args.result_dir+args.figures_dir)
 
@@ -246,15 +248,13 @@ if __name__ == "__main__":
 
     # Make a pool
     p = Pool(args.number_of_processes)
+    assert args.testing_examples % args.chunk_size == 0, "Number of testing examples should multiple of chunk_size"
+
     # Run the pool
     p.starmap(run, zip(itertools.repeat(args), list(range(0, args.testing_examples, args.chunk_size))))
 
     print("Simulations complete. Gathering data...")
+    #TODO gather data meaningfully now
 
-    accuracies = []
-    for filename in os.listdir(args.result_dir):
-        data_processor = OutputDataProcessor(os.path.join(args.result_dir, filename))
-        accuracy = data_processor.get_accuracy()
-        print("File: {} Accuracy: {}".format(str(filename), str(accuracy)))
-        accuracies.append(accuracy)
-    print("Accuracy = {}".format(str(sum(accuracies) / len(accuracies))))
+
+    print("Error = {}".format(str(sum(errors) / len(errors))))
