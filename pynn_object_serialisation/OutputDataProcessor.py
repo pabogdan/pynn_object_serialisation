@@ -8,15 +8,13 @@ class OutputDataProcessor():
     #TODO fix this to take variables from serialised argparser
     def __init__(self, path):
         self.data = np.load(path, allow_pickle=True)
-        self.spikes_dict = self.reconstruct_spikes_dict()
+        self.spikes_dict = self.data['all_spikes'][()]
         self.layer_names = list(self.spikes_dict.keys())
         self.order_layer_names()
         self.input_layer_name = 'InputLayer'
         self.output_layer_name = self.layer_names[-1]
         self.y_test = self.data['y_test']
-        self.t_stim = self.data['t_stim']
         self.simtime = int(self.data['simtime'])
-        self.N_layer = int(self.data['N_layer'])
         self.set_dt()
         self.neo_object = self.data['neo_spikes_dict']
         self.delay = self.get_delay()
@@ -27,6 +25,7 @@ class OutputDataProcessor():
         self.input_spikes = self.spikes_dict[self.input_layer_name]
         self.output_spikes = self.spikes_dict[self.output_layer_name]
         self.testing_examples = self.data['testing_examples']
+        self.t_stim = self.simtime/self.testing_examples
         self.y_test = np.array(self.data['y_test'][:self.testing_examples], dtype=np.int8)
         if len(self.y_test.shape) >1 and\
                                         (self.y_test.shape[-1] == self.layer_shapes[-1][0] or\

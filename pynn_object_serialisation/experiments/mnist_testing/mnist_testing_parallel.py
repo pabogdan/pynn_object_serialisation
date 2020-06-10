@@ -142,6 +142,7 @@ def run(args, start_index):
 
     sim_start_time = plt.datetime.datetime.now()
     if not args.reset_v:
+        print('Presenting examples {}:{}'.format(start_index, start_index + testing_examples))
         sim.run(simtime)
 
     for i in range(args.chunk_size):
@@ -253,8 +254,4 @@ if __name__ == "__main__":
     # Run the pool
     p.starmap(run, zip(itertools.repeat(args), list(range(0, args.testing_examples, args.chunk_size))))
 
-    print("Simulations complete. Gathering data...")
-    #TODO gather data meaningfully now
-
-
-    print("Error = {}".format(str(sum(errors) / len(errors))))
+    print("Simulations complete")
