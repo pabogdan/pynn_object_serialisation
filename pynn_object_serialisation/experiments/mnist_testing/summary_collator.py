@@ -21,16 +21,19 @@ data_summary_file = "summary.csv"
 
 
 
-output = []
+output = {}
+
 
 
 for root, dirs, files in os.walk(args.root_directory):
     if data_summary_file in files:
-        with open(os.path.join(root, data_summary_file), 'r') as myfile:
-            data = myfile.read().replace('\n', '')
-            print(data)
-        output.append(data)
+        with open(os.path.join(root,data_summary_file), mode='r') as csv_file:
+            csv_reader = csv.reader(csv_file, delimiter=',')
+            for row in csv_reader:
+                output[row[0]] = row[1]
 
 with open(master_summary_filename, 'w') as myfile:
     wr = csv.writer(myfile)
-    wr.writerow(output)
+
+    for key,value in output.items():
+        wr.writerow([key, value])
