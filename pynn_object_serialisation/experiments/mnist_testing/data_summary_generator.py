@@ -1,4 +1,4 @@
-#This script processes the run director at the end of the run and generates a summary data file
+#This script processes the run directory at the end of the run and generates a summary data file
 import argparse
 from pynn_object_serialisation.OutputDataProcessor import OutputDataProcessor
 import csv
