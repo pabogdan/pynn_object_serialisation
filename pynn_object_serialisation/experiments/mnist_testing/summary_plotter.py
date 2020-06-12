@@ -27,4 +27,5 @@ for key, value in data.items():
 
 plt.bar(range(len(data)), list(data.values()), align='center', color='red')
 plt.xticks(range(len(data)), list(data.keys()))
+plt.savefig('plot.png')
 plt.show()
