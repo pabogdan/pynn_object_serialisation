@@ -1,4 +1,4 @@
-RESULT_ROOT_DIR=$(ROOT_DIR)/results
+RESULT_ROOT_DIR=./results
 RESULT_DIRS=$(wildcard $(RESULT_ROOT_DIR)/*/)
 RESULT_SUMMARIES=$(wildcard $(RESULT_ROOT_DIR)/*/summary.csv)
 
