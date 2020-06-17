@@ -54,7 +54,7 @@ class OutputDataProcessor():
     
     def get_layer_shapes(self):
         from snntoolbox.simulation.utils import get_shape_from_label
-        return [get_shape_from_label(label) if label != "InputLayer" else self.input_layer_shape for label in self.layer_names]    
+        return [get_shape_from_label(label) if label not in ["InputLayer", "corr_pop"] else self.input_layer_shape for label in self.layer_names]
     
     
     def order_layer_names(self):
