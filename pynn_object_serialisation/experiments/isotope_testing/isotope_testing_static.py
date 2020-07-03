@@ -17,6 +17,8 @@ import os
 
 def convert_rate_array_to_VRPSS(input_rates: np.array, max_rate=1000, duration=1000):
     print("Generating VRPSS...")
+    if len(input_rates.shape) < 3:
+        input_rates = np.expand_dims(input_rates, -1)
     number_of_examples = input_rates.shape[0]
     number_of_input_neurons = input_rates.shape[1]
     input_rates = max_rate*(input_rates[:,...,0])
@@ -55,8 +57,8 @@ def run(args):
 
     # Load data from file
     
-    x_test = np.load("dataset/x_test.npz")['arr_0']
-    y_test = np.load("dataset/y_test.npz")['arr_0']
+    x_test = np.load(args.data_dir +"x_test.npz")['arr_0']
+    y_test = np.load(args.data_dir +"y_test.npz")['arr_0']
 
     replace = None       
     runtime = args.t_stim * args.testing_examples
@@ -66,15 +68,32 @@ def run(args):
     path = str(Path(getcwd()).parent) + '/'
     
     path = "/home/edwardjones/git/RadioisotopeDataToolbox/"
-    input_params = convert_rate_array_to_VRPSS(x_test[args.start_index:args.start_index+args.testing_examples], max_rate=args.rate_scaling, duration=args.t_stim)    
-    populations, projections, custom_params = restore_simulator_from_file(
+    input_params = convert_rate_array_to_VRPSS(x_test[args.start_index:args.start_index+args.testing_examples], max_rate=args.rate_scaling, duration=args.t_stim)
+
+    timestep = args.timestep
+    timescale = args.time_scale_factor
+
+    output_v = []
+    sim.setup(timestep,
+              timestep,
+              timestep,
+              time_scale_factor=timescale)
+
+    print("Setting number of neurons per core...")
+
+    sim.set_number_of_neurons_per_core(SpikeSourcePoissonVariable, 16)
+    sim.set_number_of_neurons_per_core(sim.SpikeSourcePoisson, 16)
+    sim.set_number_of_neurons_per_core(sim.IF_curr_exp, 64)
+    sim.set_number_of_neurons_per_core(sim.IF_cond_exp, 64)
+
+    populations, projections, extra_params = restore_simulator_from_file(
         sim, args.model,
         input_type='vrpss',
         vrpss_cellparams=input_params,
-        replace_params=replace,
-        time_scale_factor=args.time_scale_factor)
+        replace_params=replace)
     
     dt = sim.get_time_step()
+    simtime = args.testing_examples * args.t_stim
     N_layer = len(populations)
     min_delay = sim.get_min_delay()
     max_delay = sim.get_max_delay()
@@ -82,7 +101,7 @@ def run(args):
     sim.set_number_of_neurons_per_core(sim.SpikeSourcePoisson, 16)
     sim.set_number_of_neurons_per_core(sim.IF_curr_exp, 128)
     sim.set_number_of_neurons_per_core(sim.IF_cond_exp, 128)
-    old_runtime = custom_params['runtime']
+    old_runtime = extra_params['simtime'] if 'simtime' in extra_params else None
     set_i_offsets(populations, runtime, old_runtime=old_runtime)
     spikes_dict = {}
     output_v = []
@@ -117,19 +136,32 @@ def run(args):
         spikes_dict[pop.label] = pop.spinnaker_get_data('spikes')
     if args.record_v:
         output_v = populations[-1].spinnaker_get_data('v')
-    
+
+    sim_params = {
+        "argparser": vars(args)
+    }
+
     # save results
     result_filename=get_result_filename(args)
-    np.savez_compressed(os.path.join(args.result_dir, result_filename),
+    np.savez_compressed(result_filename,
                         output_v=output_v,
                         neo_spikes_dict=neo_spikes_dict,
-                        y_test=y_test,
+                        all_spikes=spikes_dict,
+                        all_neurons=extra_params['all_neurons'],
+                        testing_examples=args.testing_examples,
                         N_layer=N_layer,
+                        no_testing_examples=args.testing_examples,
+                        num_classes=10,
+                        y_test=y_test,
+                        input_params=input_params,
+                        input_size=N_layer,
+                        simtime=simtime,
                         t_stim=args.t_stim,
-                        runtime=runtime,
-                        sim_time=runtime,
-                        dt=dt,
-                        **spikes_dict)
+                        timestep=timestep,
+                        time_scale_factor=timescale,
+                        sim_params=sim_params,
+                        init_connectivity=extra_params['all_connections'],
+                        extra_params=extra_params)
     sim.end()
 
 if __name__ == "__main__":
@@ -141,5 +173,3 @@ if __name__ == "__main__":
     
     proc = OutputDataProcessor(args.result_dir +'/'+ get_result_filename(args)+'.npz')
     print(proc.get_accuracy())
-    
-    

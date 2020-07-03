@@ -20,12 +20,12 @@ class OutputDataProcessor():
         self.delay = self.get_delay()
         self.input_layer_name = self.layer_names[0]
         self.output_layer_name = self.layer_names[-1]
-        self.input_layer_shape = (3238,1)
+        self.input_layer_shape = (100,1)
         self.layer_shapes = self.get_layer_shapes()
         self.input_spikes = self.spikes_dict[self.input_layer_name]
         self.output_spikes = self.spikes_dict[self.output_layer_name]
         self.testing_examples = self.data['testing_examples']
-        self.t_stim = self.simtime/self.testing_examples
+        self.t_stim = self.data['t_stim']
         self.y_test = np.array(self.data['y_test'][:self.testing_examples], dtype=np.int8)
         if len(self.y_test.shape) >1 and\
                                         (self.y_test.shape[-1] == self.layer_shapes[-1][0] or\
@@ -35,7 +35,7 @@ class OutputDataProcessor():
     
     def set_dt(self):
         try:
-            self.dt = self.data['dt']
+            self.dt = self.data['timestep']
         except:
             self.dt = 0.1
 
@@ -101,8 +101,7 @@ class OutputDataProcessor():
         '''Returns the spike train data for a given layer and bin'''
         lower_end_bin_time, higher_end_bin_time = self.get_bounds(bin_number)
         spikes = self.spikes_dict[layer_name]
-        output = spikes[np.where((spikes[:, 1] >= lower_end_bin_time) & (
-            spikes[:, 1] < higher_end_bin_time))]
+        output = spikes[np.where((spikes[:, 1] >= lower_end_bin_time) & (spikes[:, 1] < higher_end_bin_time))]
         output = np.asarray(output).astype(int)
         return output
     
