@@ -173,6 +173,19 @@ class OutputDataProcessor():
         self.plot_output(bin_number)
         self.plot_bin(bin_number, self.output_layer_name)
 
+    def save_spike_train(self):
+        output_folder = "/home/edwardjones/git/RadioisotopeDataToolbox/radioisotopedatatoolbox/scripts/spiketrain_csvs"
+        for i in range(self.testing_examples):
+            input = self.get_bin_spikes(i, self.layer_names[0])
+            output = self.get_bin_spikes(i, self.layer_names[-1])
+            offset = i*self.t_stim
+            input[:,1] = input[:,1]-offset
+            output[:, 1] = output[:, 1] - offset
+
+
+            np.savetxt(output_folder+"/example_{}_input.csv".format(i), input, delimiter=',')
+            np.savetxt(output_folder+"/example_{}_output.csv".format(i), output, delimiter=',')
+
 if __name__ == "__main__":
     import OutputDataProcessor_argparser
     args = OutputDataProcessor_argparser.main()
