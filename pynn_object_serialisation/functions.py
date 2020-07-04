@@ -377,6 +377,13 @@ def set_i_offsets(populations, new_runtime, old_runtime=1000):
         except Exception:
             pass
 
+def set_zero_i_offsets(populations):
+    for population in populations:
+        try:
+            population.set(i_offset=0)
+        except Exception:
+            pass
+
 
 def serialisation_summary(filename):
     """ Gives a human-readable output for a serialised model
