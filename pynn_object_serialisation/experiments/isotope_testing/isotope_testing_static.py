@@ -9,7 +9,7 @@ except Exception:
     import pyNN.spiNNaker as sim
 import matplotlib.pyplot as plt
 from pynn_object_serialisation.functions import \
-    restore_simulator_from_file, set_i_offsets
+    restore_simulator_from_file, set_i_offsets, set_zero_i_offsets
 from spynnaker8.extra_models import SpikeSourcePoissonVariable
 from radioisotopedatatoolbox.DataGenerator import RandomIsotopeFlyBys
 import numpy as np
@@ -86,6 +86,19 @@ def run(args):
     sim.set_number_of_neurons_per_core(sim.IF_curr_exp, 64)
     sim.set_number_of_neurons_per_core(sim.IF_cond_exp, 64)
 
+    v_reset = 0
+
+    replace= {'v_thresh': 2,
+              'tau_refrac': 0,
+              'v_reset': v_reset,
+              'v_rest': 0,
+              'cm': 1,
+              'tau_m': 1000,
+              'tau_syn_E': 0.02,
+              'tau_syn_I': 0.02,
+              'delay': 0}
+
+
     populations, projections, extra_params = restore_simulator_from_file(
         sim, args.model,
         input_type='vrpss',
@@ -102,7 +115,8 @@ def run(args):
     sim.set_number_of_neurons_per_core(sim.IF_curr_exp, 128)
     sim.set_number_of_neurons_per_core(sim.IF_cond_exp, 128)
     old_runtime = extra_params['simtime'] if 'simtime' in extra_params else None
-    set_i_offsets(populations, runtime, old_runtime=old_runtime)
+    #set_i_offsets(populations, runtime, old_runtime=old_runtime)
+    set_zero_i_offsets(populations)
     spikes_dict = {}
     output_v = []
     neo_spikes_dict = {}
@@ -123,15 +137,15 @@ def run(args):
     if args.record_v:
         populations[-1].record("v")
     
-    def reset_membrane_voltage():        
+    def reset_membrane_voltage(v_reset):
         for population in populations[1:]:
-            population.set_initial_value(variable="v", value=0)
+            population.set_initial_value(variable="v", value=v_reset)
         return
     
     for presentation in range(args.testing_examples):
         print("Presenting test example {}".format(presentation))
         sim.run(args.t_stim)
-        reset_membrane_voltage()
+        reset_membrane_voltage(v_reset)
     for pop in populations[:]:
         spikes_dict[pop.label] = pop.spinnaker_get_data('spikes')
     if args.record_v:
