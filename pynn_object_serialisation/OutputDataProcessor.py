@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 
 class OutputDataProcessor():
     ''' A class to represent the output of a serialised model and to
@@ -174,7 +175,12 @@ class OutputDataProcessor():
         self.plot_bin(bin_number, self.output_layer_name)
 
     def save_spike_train(self):
-        output_folder = "/home/edwardjones/git/RadioisotopeDataToolbox/radioisotopedatatoolbox/scripts/spiketrain_csvs"
+        # TODO set this as an arg
+        output_folder = "/home/edwardjones/git/RadioisotopeDataToolbox/radioisotopedatatoolbox/scripts/Rebinned_ANN/spiketrain_csvs"
+
+        if not os.path.exists(output_folder):
+            os.makedirs(output_folder)
+
         for i in range(self.testing_examples):
             input = self.get_bin_spikes(i, self.layer_names[0])
             output = self.get_bin_spikes(i, self.layer_names[-1])
