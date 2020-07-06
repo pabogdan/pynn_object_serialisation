@@ -19,6 +19,8 @@ DEFAULT_TIME_SCALE_FACTOR = 100
 DEFAULT_TIMESTEP = 1
 DEFAULT_START_INDEX = 0
 
+DEFAULT_THRESH = 1 #not yet implemented
+
 
 
 parser = argparse.ArgumentParser(
@@ -133,6 +135,10 @@ parser.add_argument('--force_resim',
 parser.add_argument('--retrieve_connectivity',
                     help='Should we retrieve the connectivity from SpiNNaker?',
                     action="store_true")
+
+parser.add_argument('--v_thresh', type=int,
+                    help='what the voltage threshold should be',
+                    default=DEFAULT_THRESH) #not yet implemented
 
 
 
