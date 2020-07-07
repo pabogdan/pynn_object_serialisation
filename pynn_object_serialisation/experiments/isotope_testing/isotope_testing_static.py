@@ -103,7 +103,8 @@ def run(args):
         sim, args.model,
         input_type='vrpss',
         vrpss_cellparams=input_params,
-        replace_params=replace)
+        replace_params=replace,
+    delta_input=True)
     
     dt = sim.get_time_step()
     simtime = args.testing_examples * args.t_stim

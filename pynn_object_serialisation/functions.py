@@ -4,7 +4,7 @@ import pydoc  # used to retrieve Class from string
 import numpy as np
 import pynn_object_serialisation.serialisation_utils as utils
 from spynnaker8.extra_models import SpikeSourcePoissonVariable
-from spynnaker8 import SpikeSourceArray, SpikeSourcePoisson
+from spynnaker8 import SpikeSourceArray, SpikeSourcePoisson, IF_curr_delta
 from pprint import pprint as pp
 from colorama import Fore, Style, init as color_init
 import scipy
@@ -134,7 +134,8 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
                                 ssa_cellparams=None,
                                 replace_params=None,
                                 first_n_layers=None,
-                                timestep=1.0
+                                timestep=1.0,
+                                delta_input=False
                                 ):
     replace_params = replace_params or {}
 
@@ -205,8 +206,14 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
         elif pop_cellclass is SpikeSourcePoissonVariable:
             pop_cellparams = connectivity_data[pop_info['cellparams']].ravel()[0]
         else:
-            pop_cellparams = \
-                connectivity_data[str(p_id)].ravel()[0]
+            if delta_input:
+                pop_cellclass = IF_curr_delta
+                applicable_attributes = [k for k in pop_cellclass.default_initial_values.keys()] + [k for k in
+                                                                            pop_cellclass.default_parameters.keys()]
+                pop_cellparams = connectivity_data[str(p_id)].ravel()[0]
+                pop_cellparams = {k: v for (k,v) in pop_cellparams.items() if k in applicable_attributes}
+            else:
+                pop_cellparams = connectivity_data[str(p_id)].ravel()[0]
 
         for k in replace_params.keys():
             if k in pop_cellparams.keys():
