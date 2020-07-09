@@ -159,11 +159,13 @@ class OutputDataProcessor():
         if bin_number > self.testing_examples:
             raise Exception('bin_number greater than number_of_examples')
             bin_number = self.testing_examples - 1
-        output_spikes = self.get_counts(bin_number, self.output_layer_name, 10)
+        output_spikes = self.get_counts(bin_number, self.output_layer_name, 8)
         if hasattr(self, 'label_names'):
             label_names = [name.decode('utf-8') for name in self.label_names]
-            plt.bar(label_names, output_spikes)
+            plt.xlabel(label_names)
+        plt.bar(range(len(output_spikes)), output_spikes)
         plt.xticks(rotation=90)
+        plt.show()
 
     def get_accuracy(self):
         import pdb; pdb.set_trace()
@@ -192,6 +194,18 @@ class OutputDataProcessor():
 
             np.savetxt(output_folder+"/example_{}_input.csv".format(i), input, delimiter=',')
             np.savetxt(output_folder+"/example_{}_output.csv".format(i), output, delimiter=',')
+
+    def plot_confusion_matrix(self):
+        from sklearn.metrics import confusion_matrix
+
+        cm = confusion_matrix(self.y_test, self.y_pred)
+        plt.imshow(cm)
+        plt.xlabel("True label")
+        plt.xticks(range(np.argmax(self.y_test)))
+        plt.ylabel("Predicted label")
+        plt.yticks(range(np.argmax(self.y_test)))
+        plt.show()
+        print(cm)
 
 if __name__ == "__main__":
     import OutputDataProcessor_argparser
