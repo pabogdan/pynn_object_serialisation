@@ -32,7 +32,7 @@ class OutputDataProcessor():
                                         (self.y_test.shape[-1] == self.layer_shapes[-1][0] or\
                                         self.y_test.shape[0] == self.layer_shapes[-1][0]):
             self.y_test = self.convert_output_to_index(self.y_test)
-        self.y_pred = np.array(self.get_batch_predictions(), dtype=np.int8)
+        self.y_pred = np.array(self.get_batch_predictions(), dtype=np.int64)
     
     def set_dt(self):
         try:
@@ -166,6 +166,7 @@ class OutputDataProcessor():
         plt.xticks(rotation=90)
 
     def get_accuracy(self):
+        import pdb; pdb.set_trace()
         actual_test_labels = self.y_test[:self.testing_examples].ravel()
         y_pred = self.get_batch_predictions()
         return np.count_nonzero(y_pred==actual_test_labels)/float(self.testing_examples)
