@@ -194,6 +194,18 @@ class OutputDataProcessor():
             np.savetxt(output_folder+"/example_{}_input.csv".format(i), input, delimiter=',')
             np.savetxt(output_folder+"/example_{}_output.csv".format(i), output, delimiter=',')
 
+    def plot_confusion_matrix(self):
+        from sklearn.metrics import confusion_matrix
+
+        cm = confusion_matrix(self.y_test, self.y_pred)
+        plt.imshow(cm)
+        plt.xlabel("True label")
+        plt.xticks(range(np.argmax(self.y_test)))
+        plt.ylabel("Predicted label")
+        plt.yticks(range(np.argmax(self.y_test)))
+        plt.show()
+        print(cm)
+
 if __name__ == "__main__":
     import OutputDataProcessor_argparser
     args = OutputDataProcessor_argparser.main()
