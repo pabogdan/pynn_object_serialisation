@@ -159,11 +159,13 @@ class OutputDataProcessor():
         if bin_number > self.testing_examples:
             raise Exception('bin_number greater than number_of_examples')
             bin_number = self.testing_examples - 1
-        output_spikes = self.get_counts(bin_number, self.output_layer_name, 10)
+        output_spikes = self.get_counts(bin_number, self.output_layer_name, 8)
         if hasattr(self, 'label_names'):
             label_names = [name.decode('utf-8') for name in self.label_names]
-            plt.bar(label_names, output_spikes)
+            plt.xlabel(label_names)
+        plt.bar(range(len(output_spikes)), output_spikes)
         plt.xticks(rotation=90)
+        plt.show()
 
     def get_accuracy(self):
         actual_test_labels = self.y_test[:self.testing_examples].ravel()
