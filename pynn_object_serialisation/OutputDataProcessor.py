@@ -168,7 +168,6 @@ class OutputDataProcessor():
         plt.show()
 
     def get_accuracy(self):
-        import pdb; pdb.set_trace()
         actual_test_labels = self.y_test[:self.testing_examples].ravel()
         y_pred = self.get_batch_predictions()
         return np.count_nonzero(y_pred==actual_test_labels)/float(self.testing_examples)
