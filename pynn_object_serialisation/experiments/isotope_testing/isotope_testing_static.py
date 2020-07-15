@@ -85,13 +85,15 @@ def run(args):
     sim.set_number_of_neurons_per_core(sim.SpikeSourcePoisson, 16)
     sim.set_number_of_neurons_per_core(sim.IF_curr_exp, 64)
     sim.set_number_of_neurons_per_core(sim.IF_cond_exp, 64)
+    sim.set_number_of_neurons_per_core(sim.IF_curr_delta, 64)
 
     v_reset = 0
 
-    replace= {'v_thresh': 2,
+    replace= {'v_thresh': args.v_thresh,
               'tau_refrac': 0,
               'v_reset': v_reset,
               'v_rest': 0,
+              'v':0,
               'cm': 1,
               'tau_m': 1000,
               'tau_syn_E': 0.02,
@@ -104,7 +106,7 @@ def run(args):
         input_type='vrpss',
         vrpss_cellparams=input_params,
         replace_params=replace,
-    delta_input=True)
+        delta_input=args.delta)
     
     dt = sim.get_time_step()
     simtime = args.testing_examples * args.t_stim

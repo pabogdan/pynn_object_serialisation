@@ -41,7 +41,10 @@ parser.add_argument('--result_filename', type=str,
 parser.add_argument('--record_v',
                     help='record voltage for output neurons',
                     action="store_true")
-
+#TODO implement this is isotope_testing
+parser.add_argument('--test_with_SSA',
+                    help='Test with Spike Source Array',
+                    action = "store_true")
 
 parser.add_argument('--test_with_pss',
                     help='Test using only the Poisson Spike Source '
@@ -103,6 +106,10 @@ parser.add_argument('--non_categorical', dest="non_categorical",
 parser.add_argument('--reset_v',
                     help='Reset voltage of all neurons in the network after '
                          'each pattern presentation',
+                    action="store_true")
+
+parser.add_argument('--delta',
+                    help='Use IF_curr_delta model',
                     action="store_true")
 
 parser.add_argument('--timestep', type=float,
