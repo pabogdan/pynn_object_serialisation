@@ -208,12 +208,7 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
         else:
             if delta_input:
                 pop_cellclass = IF_curr_delta
-                applicable_attributes = [k for k in pop_cellclass.default_initial_values.keys()] + [k for k in
-                                                                            pop_cellclass.default_parameters.keys()]
-                pop_cellparams = connectivity_data[str(p_id)].ravel()[0]
-                pop_cellparams = {k: v for (k,v) in pop_cellparams.items() if k in applicable_attributes}
-            else:
-                pop_cellparams = connectivity_data[str(p_id)].ravel()[0]
+                pop_cellparams = {**pop_cellclass.default_initial_values, **pop_cellclass.default_parameters}
 
         for k in replace_params.keys():
             if k in pop_cellparams.keys():
