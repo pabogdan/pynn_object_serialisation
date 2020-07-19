@@ -1,5 +1,6 @@
 import argparse
 from pynn_object_serialisation.functions import extract_parameters
+import os
 
 #Parses filename from arg
 parser = argparse.ArgumentParser(
@@ -17,6 +18,8 @@ parser.add_argument('output_type', type=str,
             default="csv")
 args = parser.parse_args()
 
+if not os.path.exists(args.output_dir):
+    os.makedirs(args.output_dir)
 
 #runs the parameter extractor on them
 try:
