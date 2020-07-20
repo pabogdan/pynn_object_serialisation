@@ -178,7 +178,7 @@ class OutputDataProcessor():
 
     def save_spike_train(self):
         # TODO set this as an arg
-        output_folder = "/home/edwardjones/git/RadioisotopeDataToolbox/radioisotopedatatoolbox/scripts/Rebinned_ANN/spiketrain_csvs"
+        output_folder = "/mnt/snntoolbox/RadioisotopeDataToolbox/radioisotopedatatoolbox/scripts/Rebinned_ANN/spiketrain_csvs"
 
         if not os.path.exists(output_folder):
             os.makedirs(output_folder)

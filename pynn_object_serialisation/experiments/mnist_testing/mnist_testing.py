@@ -39,7 +39,7 @@ def signal_handler(signal, frame):
 
 def generate_run_folder_from_params(args):
     folder_details = "/model_name_{}_t_stim_{}_rate_scaling_{}_tsf_{}_testing_examples_{}_dt_{}".format \
-        (args.model, args.t_stim, args.rate_scaling, args.time_scale_factor, args.testing_examples, args.timestep)
+        (os.path.basename(args.model), args.t_stim, args.rate_scaling, args.time_scale_factor, args.testing_examples, args.timestep)
     return folder_details
 
 

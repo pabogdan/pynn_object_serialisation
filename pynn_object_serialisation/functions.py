@@ -245,12 +245,11 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
         _conn = utils._prune_connector(connectivity_data[str(proj_info['id'])],
                                        prune_level=prune_level)
 
-        #Basically just divide it by 5. I'm sure that will make it work...
-        #TODO Make this more rigorous and based on variables
+        #TODO These values should come from the original model values
         tau_syn_E = 0.02
         tau_syn_I = 0.02
         # just to give a sensible answer if tau_syn_E and I are different
-        t = 1
+        t = timestep
         tau = (tau_syn_E + tau_syn_I) / 2
         scale = 0.1 * t / (tau * (np.exp(-(t / tau)) + 1))
         print('Weights scaled by a factor of {0}'.format(1/scale, ))

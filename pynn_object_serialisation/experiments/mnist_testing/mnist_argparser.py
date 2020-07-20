@@ -4,7 +4,7 @@ batch_size = 50
 epochs = 20
 
 DEFAULT_MODEL_DIR = 'models/'
-DEFAULT_RESULT_DIR = 'results/'
+DEFAULT_RESULT_DIR = 'results'
 DEFAULT_FIGURE_DIR = 'figures/'
 
 DEFAULT_RESULT_FILENAME = "results"
