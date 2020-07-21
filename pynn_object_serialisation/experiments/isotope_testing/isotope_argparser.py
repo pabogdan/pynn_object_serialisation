@@ -17,7 +17,6 @@ DEFAULT_CHUNK_SIZE = 1
 DEFAULT_NUMBER_OF_PROCESSES = 1
 DEFAULT_TIME_SCALE_FACTOR = 100
 DEFAULT_TIMESTEP = 1
-DEFAULT_START_INDEX = 0
 
 DEFAULT_THRESH = 1 #not yet implemented
 
@@ -95,10 +94,6 @@ parser.add_argument('--chunk_size', type=int,
                     help='the number of bins per chunk',
                     default=DEFAULT_CHUNK_SIZE)
 
-parser.add_argument('--start_index', type=int,
-                    help='first index of testing set',
-                    default=DEFAULT_START_INDEX)
-
 parser.add_argument('--non_categorical', dest="non_categorical",
                     help='filename for results',
                     action="store_false")
@@ -145,18 +140,10 @@ parser.add_argument('--retrieve_connectivity',
 
 parser.add_argument('--v_thresh', type=int,
                     help='what the voltage threshold should be',
-                    default=DEFAULT_THRESH) #not yet implemented
-
-
-
-
-
-
-
+                    default=DEFAULT_THRESH)
 
 def main():
-    return parser.parse_args()
+    args = parser.parse_args()
+    return args
 
 
-if __name__ == "__main__":
-    main()
