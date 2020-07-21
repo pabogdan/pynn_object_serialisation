@@ -177,23 +177,20 @@ class OutputDataProcessor():
         self.plot_output(bin_number)
         self.plot_bin(bin_number, self.output_layer_name)
 
-    def save_spike_train(self):
-        # TODO set this as an arg
-        output_folder = "/mnt/snntoolbox/RadioisotopeDataToolbox/radioisotopedatatoolbox/scripts/Rebinned_ANN/spiketrain_csvs"
+    def save_spiketrain(self, output_folder='spiketrain_csvs'):
 
         if not os.path.exists(output_folder):
             os.makedirs(output_folder)
 
-        for i in range(self.testing_examples):
+        for i in range(self.chunk_size):
             input = self.get_bin_spikes(i, self.layer_names[0])
             output = self.get_bin_spikes(i, self.layer_names[-1])
             offset = i*self.t_stim
             input[:,1] = input[:,1]-offset
             output[:, 1] = output[:, 1] - offset
 
-
-            np.savetxt(output_folder+"/example_{}_input.csv".format(i), input, delimiter=',')
-            np.savetxt(output_folder+"/example_{}_output.csv".format(i), output, delimiter=',')
+            np.savetxt(output_folder+"/example_{}_input.csv".format(self.start_index+i), input, delimiter=',')
+            np.savetxt(output_folder+"/example_{}_output.csv".format(self.start_index+i), output, delimiter=',')
 
     def plot_confusion_matrix(self):
         from sklearn.metrics import confusion_matrix
