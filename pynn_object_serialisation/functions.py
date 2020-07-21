@@ -246,13 +246,13 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
                                        prune_level=prune_level)
 
         #TODO These values should come from the original model values
-        tau_syn_E = 0.02
-        tau_syn_I = 0.02
-        # just to give a sensible answer if tau_syn_E and I are different
-        t = timestep
-        tau = (tau_syn_E + tau_syn_I) / 2
-        scale = 0.1 * t / (tau * (np.exp(-(t / tau)) + 1))
-        print('Weights scaled by a factor of {0}'.format(1/scale, ))
+        # tau_syn_E = 0.02
+        # tau_syn_I = 0.02
+        # # just to give a sensible answer if tau_syn_E and I are different
+        # t = timestep
+        # tau = (tau_syn_E + tau_syn_I) / 2
+        # scale = t / (10 * tau * (np.exp(-(t / tau)) + 1))
+        # print('Weights scaled by a factor of {0}'.format(1/scale, ))
 
         #_conn = utils._scale_and_cast_weights(_conn, 1/scale)
 

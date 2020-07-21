@@ -14,7 +14,6 @@ class OutputDataProcessor():
         self.order_layer_names()
         self.input_layer_name = 'InputLayer'
         self.output_layer_name = self.layer_names[-1]
-        self.y_test = self.data['y_test']
         self.simtime = int(self.data['simtime'])
         self.set_dt()
         self.neo_object = self.data['neo_spikes_dict']
@@ -27,6 +26,8 @@ class OutputDataProcessor():
         self.output_spikes = self.spikes_dict[self.output_layer_name]
         self.testing_examples = self.data['testing_examples']
         self.t_stim = self.data['t_stim']
+        self.chunk_size =  self.data['chunk_size'] if "chunk_size" in self.data.keys() else self.testing_examples
+        self.start_index = self.data['start_index'] if "start_index" in self.data.keys() else 0
         self.y_test = np.array(self.data['y_test'][:self.testing_examples], dtype=np.int8)
         if len(self.y_test.shape) >1 and\
                                         (self.y_test.shape[-1] == self.layer_shapes[-1][0] or\
@@ -149,16 +150,16 @@ class OutputDataProcessor():
             return -1
 
     def get_batch_predictions(self):
-        y_pred = np.ones(self.testing_examples) * (-1)
-        for bin_number in range(self.testing_examples):
+        y_pred = np.ones(self.chunk_size) * (-1)
+        for bin_number in range(self.chunk_size):
             y_pred[bin_number] = self.get_prediction(
                 bin_number, self.output_layer_name)
         return y_pred
 
     def plot_output(self, bin_number):
-        if bin_number > self.testing_examples:
+        if bin_number > self.self.chunk_size:
             raise Exception('bin_number greater than number_of_examples')
-            bin_number = self.testing_examples - 1
+            bin_number = self.chunk_size - 1
         output_spikes = self.get_counts(bin_number, self.output_layer_name, 8)
         if hasattr(self, 'label_names'):
             label_names = [name.decode('utf-8') for name in self.label_names]
@@ -168,9 +169,9 @@ class OutputDataProcessor():
         plt.show()
 
     def get_accuracy(self):
-        actual_test_labels = self.y_test[:self.testing_examples].ravel()
+        actual_test_labels = self.y_test[self.start_index:self.start_index+self.chunk_size].ravel()
         y_pred = self.get_batch_predictions()
-        return np.count_nonzero(y_pred==actual_test_labels)/float(self.testing_examples)
+        return np.count_nonzero(y_pred==actual_test_labels)/float(self.chunk_size)
 
     def bin_summary(self, bin_number):
         self.plot_output(bin_number)
