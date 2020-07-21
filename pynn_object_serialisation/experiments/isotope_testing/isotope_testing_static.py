@@ -1,7 +1,6 @@
 # import keras dataset to deal with our common use cases
 import multiprocessing
-
-import itertools
+import copy
 
 from keras.datasets import mnist, cifar10, cifar100
 import keras
@@ -254,10 +253,18 @@ def main(args=None):
 
     # Make a pool
     p = multiprocessing.Pool(args.number_of_processes)
-    assert args.testing_examples % args.chunk_size == 0, "Number of testing examples should multiple of chunk_size"
+    #assert args.testing_examples % args.chunk_size == 0, "Number of testing examples should multiple of chunk_size"
+
+    args.testing_examples//args.chunk_size
+    remainder = args.testing_examples % args.chunk_size
+    chunks = list(range(0, args.testing_examples, args.chunk_size))
+    final_chunk_start = chunks[-1]
+    mod_arg = copy.deepcopy(args)
+    mod_arg.chunk_size = remainder
+    test_and_chunks = [[args, x] if x != final_chunk_start else [mod_arg, x] for x in chunks]
 
     # Run the pool
-    p.starmap(run, zip(itertools.repeat(args), list(range(0, args.testing_examples, args.chunk_size))))
+    p.starmap(run, test_and_chunks)
 
     print("Simulations complete")
 
