@@ -60,4 +60,8 @@ parser.add_argument('--max_processes', type=int,
                     help='total number of concurrent processes'
                          ' -- [default {}]'.format(DEFAULT_MAX_CONCURRENT_PROCESSES))
 
+parser.add_argument('--rate_scaling', type=float,
+                    help='input value scaling so as to properly be interpreted'
+                         'as a rate', default=DEFAULT_RATE_SCALING)
+
 args = parser.parse_args()
