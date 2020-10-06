@@ -107,6 +107,7 @@ for network in args.models:
                 '--curr_slice', str(slice),
                 '--timestep', str(args.timestep),
                 '--t_stim', str(args.t_stim),
+                '--rate_scaling', str(args.rate_scaling)
         ]
 
         if args.reset_v:
