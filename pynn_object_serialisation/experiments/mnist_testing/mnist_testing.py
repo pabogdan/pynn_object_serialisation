@@ -84,23 +84,38 @@ def test_converted_network(path_to_network, t_stim, rate_scaling=1000,
     replace = None
     # produce parameter replacement dict
     output_v = []
-
-    sim.setup(timestep,
-              timestep,
-              timestep,
-              time_scale_factor=timescale)
-
-    sim.set_number_of_neurons_per_core(SpikeSourcePoissonVariable, 32)
-    # sim.set_number_of_neurons_per_core(sim.SpikeSourcePoisson, 64)
-    # sim.set_number_of_neurons_per_core(sim.IF_curr_exp, 64)
-
-    populations, projections, extra_params = restore_simulator_from_file(
-        sim, path_to_network,
-        is_input_vrpss=True,
-        vrpss_cellparams=input_params,
-        replace_params=replace,
-    )
-    # set_i_offsets(populations, runtime)
+    populations, projections, custom_params = restore_simulator_from_file(
+    sim, args.model,
+    input_type='vrpss',
+    vrpss_cellparams=input_params,
+    replace_params=replace)
+    dt = sim.get_time_step()
+    min_delay = sim.get_min_delay()
+    max_delay = sim.get_max_delay()
+    sim.set_number_of_neurons_per_core(SpikeSourcePoissonVariable, 16)
+    sim.set_number_of_neurons_per_core(sim.SpikeSourcePoisson, 16)
+    sim.set_number_of_neurons_per_core(sim.IF_curr_exp, 64)
+    old_runtime = custom_params['runtime']
+    set_i_offsets(populations, runtime, old_runtime=old_runtime)
+    # if args.test_with_pss:
+    #     pss_params = {
+    #         'rate'
+    #     }
+    #     populations.append(sim.Population(sim.SpikeSourcePoisson, ))
+    # set up recordings for other layers if necessary
+    spikes_dict = {}
+    neo_spikes_dict = {}
+    
+    def record_output(populations,offset,output):
+        spikes = populations[-1].spinnaker_get_data('spikes')
+        spikes = spikes + [0,offset]
+        name = populations[-1].label
+        if np.shape(spikes)[0]>0:
+            if name in list(output.keys()):
+                output[name] = np.concatenate((output,spikes))
+            else:
+                output[name] = spikes 
+        return output
 
     for pop in populations[:]:
         pop.record("spikes")
@@ -129,13 +144,16 @@ def test_converted_network(path_to_network, t_stim, rate_scaling=1000,
         traceback.print_exc()
         current_error = e
 
-    # Compute time taken to reach this point
-    end_time = plt.datetime.datetime.now()
-    total_time = end_time - start_time
-    sim_total_time = end_time - sim_start_time
+    def reset_membrane_voltage():        
+        for population in populations[1:]:
+            population.set_initial_value(variable="v", value=0)
+        return
 
-
-
+    for population in populations[1:]:
+        pop.set_initial_value(variable="v", value=0)
+    for presentation in range(testing_examples):
+        sim.run(t_stim)
+        reset_membrane_voltage()
     for pop in populations[:]:
         spikes_dict[pop.label] = pop.spinnaker_get_data('spikes')
     for pop in populations:
