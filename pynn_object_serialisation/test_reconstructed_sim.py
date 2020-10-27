@@ -1,7 +1,3 @@
-
-"""
-Synfirechain-like example
-"""
 from argparser import *
 try:
     import spynnaker8 as sim
