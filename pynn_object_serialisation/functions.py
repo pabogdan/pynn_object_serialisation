@@ -473,6 +473,7 @@ def extract_parameters(filename, output_dir, output_type="npz"):
         print("Found pop {:35}".format(pop_info['label']), "containing",
               format(pop_info['n_neurons'], ","), "neurons")
         # Generate txt file that defines population (number of neurons, neuron model etc.)
+        # TODO fix for InputLayers that appear to have only one neuron
         f = open("Population_description.txt", "w+")
         for key in pop_info.keys():
             f.write(str(key) + " : " + str(pop_info[key]) + '\n')
@@ -485,6 +486,20 @@ def extract_parameters(filename, output_dir, output_type="npz"):
             os.mkdir("inh_projections")
 
     os.chdir(output_dir)
+
+    def get_complementary_projection_id(json_data, input_projection):
+        """Finds the complementary projection for a given projection"""
+
+        pre_id = input_projection['pre_id']
+        post_id = input_projection['post_id']
+        proj_id = input_projection['id']
+
+        # Pretty ridiculous list comprehension...
+        projections = [json_data['projections'][projection] for projection in json_data['projections']
+                       if (json_data['projections'][projection]['pre_id'] == pre_id and json_data['projections'][projection]['post_id'] == post_id and json_data['projections'][projection]['id'] != proj_id)]
+
+        assert len(projections) == 1
+        return projections[0]['id']
 
     for proj_no in range(no_proj):
         # temporary utility variable
@@ -506,12 +521,18 @@ def extract_parameters(filename, output_dir, output_type="npz"):
             print("How did you manage to get a receptor type that isn't exc or inh?")
 
         # Convert from_list to matrix
-        weight_matrix = convert_from_list_to_matrix(connectivity_data[str(proj_info['id'])])
+        complementary = get_complementary_projection_id(json_data, proj_info)
+        complementary_max_indices = connectivity_data[str(complementary)].max(axis=0)[:2]
+        current_max_indices = connectivity_data[str(proj_info['id'])].max(axis=0)[:2]
+        shape = np.vstack([complementary_max_indices, current_max_indices]).max(axis=0).astype('int')+1
+        print("Shape {}".format(shape))
+        weight_matrix = convert_from_list_to_matrix(connectivity_data[str(proj_info['id'])], shape)
         if output_type == "npz":
             # Write a npz
             scipy.sparse.save_npz("connections" + _type, weight_matrix)
         if output_type == "csv":
             dense_matrix = weight_matrix.todense()
+            print("Output_shape {}".format(dense_matrix.shape))
             np.savetxt("connections" + _type + ".csv", dense_matrix, delimiter=",")
         else:
             print("Did not understand output type.")
@@ -528,13 +549,13 @@ def extract_parameters(filename, output_dir, output_type="npz"):
     # Sounds like a lot of work
 
 
-def convert_from_list_to_matrix(from_list):
+def convert_from_list_to_matrix(from_list, shape):
     """Converts a from_list connector to an ANN-like connectivity matrix.
     """
     from scipy import sparse
     # from_list (pre_index, post_index, weight, delay)
     from_list = np.array(from_list)
-    mat_coo = sparse.coo_matrix((from_list[:, 2], (from_list[:, 0].astype(int), from_list[:, 1].astype(int))))
+    mat_coo = sparse.coo_matrix((from_list[:, 2], (from_list[:, 0].astype(int), from_list[:, 1].astype(int))), shape =tuple(shape.astype('int')))
     return mat_coo
 
 
