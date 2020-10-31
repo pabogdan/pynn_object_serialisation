@@ -15,14 +15,16 @@ def _trundle_through_synapse_information(syn_info, dict_to_augment):
     # TODO continue for other types of synapse dynamics
 
 
-def _build_synapse_info(sim, construct):
+def _build_synapse_info(sim, construct, timestep=1.0):
     dyn_type = construct['synapse_dynamics']
     syn_info_class = pydoc.locate(dyn_type)
     constructor_info = construct['synapse_dynamics_constructs']
     if syn_info_class is SynapseDynamicsStatic:
+        adjusted_delay = constructor_info['delay']
+        if adjusted_delay < timestep:
+            adjusted_delay = timestep
         syn_info = syn_info_class(weight=constructor_info['weight'],
-                                  delay=constructor_info['delay'])
-
+                                  delay=adjusted_delay)
     else:
         raise NotImplementedError(
             "Synapse dynamics of type {} are not supported yet".format(
@@ -89,4 +91,9 @@ def _prune_connector(conn, prune_level=1):
     descending_argsort = conn[:, 2].argsort()[::-1]
     cutoff_number = int(conn.shape[0] * prune_level)
     conn = conn[descending_argsort[:cutoff_number]]
+    return conn
+
+def _scale_and_cast_weights(conn, multiplier):
+    conn[:,2] = conn[:,2]*multiplier
+    conn[:,2] = conn[:,2].astype(np.int8)
     return conn

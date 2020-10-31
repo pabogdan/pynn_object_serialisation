@@ -39,7 +39,7 @@ def signal_handler(signal, frame):
 
 def generate_run_folder_from_params(args):
     folder_details = "/model_name_{}_t_stim_{}_rate_scaling_{}_tsf_{}_testing_examples_{}_dt_{}".format \
-        (os.path.basename(args.model), args.t_stim, args.rate_scaling, args.time_scale_factor, args.testing_examples, args.timestep)
+        (args.model, args.t_stim, args.rate_scaling, args.time_scale_factor, args.testing_examples, args.timestep)
     return folder_details
 
 
@@ -62,8 +62,8 @@ def run(args, start_index):
     g = open(g_name, 'w')
     old_stdout = sys.stdout
     old_stderr = sys.stderr
-    sys.stdout = f
-    sys.stderr = g
+    # sys.stdout = f
+    # sys.stderr = g
 
     N_layer = 28 ** 2  # number of neurons in input population
     t_stim = args.t_stim
@@ -119,6 +119,36 @@ def run(args, start_index):
         input_type='vrpss',
         vrpss_cellparams=input_params,
         replace_params=replace)
+
+    def add_correlation_population(sim, populations, projections):
+        print("Adding a input/output correlation population...")
+        #Define neuron model for population (long intergration time) propably the same as the others
+        corr_neuron_model_params = populations[1].celltype.default_parameters
+        input_size = populations[0].size
+        # Make a population that correlates input and output
+        corr_pop = sim.Population(input_size, cellclass=sim.IF_cond_exp(), label='corr_pop')
+        # Add it to populations
+        populations.append(corr_pop)
+
+        #Weight for just one spike
+
+        low_weight = 0.01
+        weight = 0.1
+
+        #Proj from input (remember delay)
+        #Add to projections
+        projections.append(sim.Projection(populations[0], corr_pop, sim.OneToOneConnector(), sim.StaticSynapse(weight=low_weight, delay=len(populations)-1), receptor_type='excitatory'))
+        #Proj from output classes
+        #Add to projections
+        from_list = [(7, x, weight, 0) for x in range(input_size)]
+        projections.append(
+            sim.Projection(populations[-2], corr_pop, sim.FromListConnector(from_list), receptor_type='excitatory'))
+        return populations, projections
+
+    populations, projections = add_correlation_population(sim, populations, projections)
+
+
+
 
     old_runtime = extra_params['simtime'] if 'simtime' in extra_params else None
     print("Setting i_offsets...")
@@ -255,3 +285,5 @@ if __name__ == "__main__":
     p.starmap(run, zip(itertools.repeat(args), list(range(0, args.testing_examples, args.chunk_size))))
 
     print("Simulations complete")
+
+    #Use OutputDataProcessor to look get graphs of activity overlayed on digits (do they show Shapley values?)

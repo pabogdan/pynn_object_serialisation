@@ -4,7 +4,10 @@ import pydoc  # used to retrieve Class from string
 import numpy as np
 import pynn_object_serialisation.serialisation_utils as utils
 from spynnaker8.extra_models import SpikeSourcePoissonVariable
-from spynnaker8 import SpikeSourceArray, SpikeSourcePoisson
+from spynnaker8 import SpikeSourceArray, SpikeSourcePoisson, IF_curr_delta
+from pprint import pprint as pp
+from colorama import Fore, Style, init as color_init
+import scipy
 
 DEFAULT_RECEPTOR_TYPES = ["excitatory", "inhibitory"]
 
@@ -122,19 +125,27 @@ def intercept_simulator(sim, output_filename=None, cellparams=None,
         import sys
         sys.exit()
 
+# TODO remove redundant input_type args
 
 def restore_simulator_from_file(sim, filename, prune_level=1.,
-                                input_type = None,
+                                input_type=None,
+                                is_input_vrpss=False,
                                 vrpss_cellparams=None,
-                                ssa_cellparams = None,
-                                replace_params=None):
+                                ssa_cellparams=None,
+                                replace_params=None,
+                                first_n_layers=None,
+                                timestep=1.0,
+                                delta_input=False
+                                ):
     replace_params = replace_params or {}
 
-    if not input_type is "vrpss" and vrpss_cellparams:
+    if is_input_vrpss:
+        input_type = 'vrpss'
+    if input_type != "vrpss" and vrpss_cellparams:
         raise AttributeError("Undefined configuration. You are passing in "
                              "parameters for a Variable Rate Poisson Spike "
                              "Source, but you are not setting "
-                             "input_type='vrpss'")
+                             "is_input_vrpss=True or input_type='vrpss'")
     # Objects and parameters
     projections = []
     populations = []
@@ -145,32 +156,32 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
     # Load connectivity data from disk
     connectivity_data = np.load(filename + ".npz", allow_pickle=True)
 
-    no_pops = len(json_data['populations'].keys())
+    # the number of populations to be reconstructed is either passed in
+    # (first_n_layers) or the total number of available populations
+    no_pops = first_n_layers or len(json_data['populations'].keys())
     no_proj = len(json_data['projections'].keys())
-    # setup
-    setup_params = json_data['setup']
-    sim.setup(setup_params['machine_time_step'] / 1000.,
-              setup_params['min_delay'],
-              setup_params['max_delay'])
-    # could set global constraints TODO
-    # TODO resolve the hack below
-    # sim.set_number_of_neurons_per_core(SpikeSourcePoissonVariable, 16)
-    # sim.set_number_of_neurons_per_core(SpikeSourcePoissonVariable, 16)
-    # sim.set_number_of_neurons_per_core(sim.SpikeSourcePoisson, 16)
-    # sim.set_number_of_neurons_per_core(sim.IF_curr_exp, 128)
 
+    extra_params = {}
     try:
-        custom_params = json_data['custom_params']
-    except KeyError:
-        custom_params = {}
+        extra_params['json_custom_params'] = json_data['custom_params']
+    except:
+        pass
     # set up populations
+    # Add reports here
+    total_no_neurons = 0
+    total_no_synapses = 0
+    max_synapses_per_neuron = 0
+    no_afferents = {}
+    all_neurons = {}
+    all_connections = {}
     print("Population reconstruction begins...")
     for pop_no in range(no_pops):
         pop_info = json_data['populations'][str(pop_no)]
         p_id = pop_info['id']
         pop_cellclass = pydoc.locate(pop_info['cellclass'])
-        print("Reconstructing pop", pop_info['label'], "containing",  pop_info['n_neurons'], "neurons")
-        if input_type is "vrpss" and (
+        print("Reconstructing pop {:35}".format(pop_info['label']), "containing",
+              format(pop_info['n_neurons'], ","), "neurons")
+        if input_type == "vrpss" and (
                 pop_cellclass is SpikeSourcePoissonVariable or
                 pop_cellclass is SpikeSourceArray or
                 pop_cellclass is SpikeSourcePoisson):
@@ -181,27 +192,31 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
 
             pop_cellclass = SpikeSourcePoissonVariable
             pop_cellparams = vrpss_cellparams
-        elif input_type is "ssa" and (
-            pop_cellclass is SpikeSourcePoissonVariable or
-            pop_cellclass is SpikeSourceArray or
-            pop_cellclass is SpikeSourcePoisson):
-            
+        elif input_type == "ssa" and (
+                pop_cellclass is SpikeSourcePoissonVariable or
+                pop_cellclass is SpikeSourceArray or
+                pop_cellclass is SpikeSourcePoisson):
+
             print("--Going to use a SpikeSourceArray for this reconstruction ...")
             print("--SpikeSourceArray is set to have", pop_info['n_neurons'], "neurons")
             print("--and is labeled as ", pop_info['label'])
             pop_cellclass = SpikeSourceArray
             pop_cellparams = ssa_cellparams
-            
+
         elif pop_cellclass is SpikeSourcePoissonVariable:
             pop_cellparams = connectivity_data[pop_info['cellparams']].ravel()[0]
         else:
-            pop_cellparams = \
-                connectivity_data[str(p_id)].ravel()[0]
+            if delta_input:
+                pop_cellclass = IF_curr_delta
+                pop_cellparams = {**pop_cellclass.default_initial_values, **pop_cellclass.default_parameters}
 
         for k in replace_params.keys():
             if k in pop_cellparams.keys():
                 pop_cellparams[k] = replace_params[k]
 
+        no_afferents[pop_info['label']] = 0
+        all_neurons[pop_info['label']] = pop_info['n_neurons']
+        total_no_neurons += pop_info['n_neurons']
         populations.append(
             sim.Population(
                 pop_info['n_neurons'],
@@ -214,34 +229,101 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
         recording_variables = pop_info['recording_variables']
         if recording_variables:
             populations[pop_no].record(recording_variables)
-
     # set up projections
     print("\n\n\nProjection reconstruction begins...")
     for proj_no in range(no_proj):
         # temporary utility variable
         proj_info = json_data['projections'][str(proj_no)]
+        receptor_type = DEFAULT_RECEPTOR_TYPES[proj_info['receptor_type']]
+        _type = "_exc" if receptor_type == "excitatory" else "_inh"
+        conn_label = proj_info['pre_label'] + "_to_" + proj_info['post_label'] + _type
+        if proj_info['post_label'] not in all_neurons.keys():
+            print("Aborting the creation of proj", conn_label)
+            continue
+
         # id of projection used to retrieve from list connectivity
         _conn = utils._prune_connector(connectivity_data[str(proj_info['id'])],
                                        prune_level=prune_level)
 
+        #TODO These values should come from the original model values
+        # tau_syn_E = 0.02
+        # tau_syn_I = 0.02
+        # # just to give a sensible answer if tau_syn_E and I are different
+        # t = timestep
+        # tau = (tau_syn_E + tau_syn_I) / 2
+        # scale = t / (10 * tau * (np.exp(-(t / tau)) + 1))
+        # print('Weights scaled by a factor of {0}'.format(1/scale, ))
+
+        #_conn = utils._scale_and_cast_weights(_conn, 1/scale)
+
         # build synapse dynamics
-        synapse_dynamics = utils._build_synapse_info(sim, proj_info)
+        synapse_dynamics = utils._build_synapse_info(sim, proj_info, timestep)
+        if len(_conn) > 0 and _conn.shape[1] == 4:
+            _conn[:, 3] = timestep
+
+        total_no_synapses += _conn.shape[0]
+
+        post_n_neurons = \
+            json_data['populations'][str(proj_info['post_number'])]['n_neurons']
+
+        number_of_synapses = _conn.shape[0]
+        max_synapses_per_neuron = max(max_synapses_per_neuron,
+                                      number_of_synapses / post_n_neurons)
         # create the projection
-        projections.append(
-            sim.Projection(
-                populations[proj_info['pre_number']],  # pre population
-                populations[proj_info['post_number']],  # post population
-                pydoc.locate(proj_info['connector_type'])(_conn),  # connector
-                synapse_type=synapse_dynamics,
-                source=proj_info['source'],
-                receptor_type=DEFAULT_RECEPTOR_TYPES[proj_info['receptor_type']],
-                space=proj_info['space']
+        print("Reconstructing proj", conn_label)
+        _c = Fore.GREEN if receptor_type == "excitatory" else Fore.RED
+        print("\t{:20}".format(format(number_of_synapses, ",")),
+              _c, DEFAULT_RECEPTOR_TYPES[proj_info['receptor_type']],
+              Style.RESET_ALL,
+              "synapses")
+        # Storing projection info based on name of post-synaptic population
+        no_afferents[proj_info['post_label']] += number_of_synapses
+        all_connections[conn_label] = _conn
+        if len(_conn) > 0:
+            projections.append(
+                sim.Projection(
+                    populations[proj_info['pre_number']],  # pre population
+                    populations[proj_info['post_number']],  # post population
+                    pydoc.locate(proj_info['connector_type'])(_conn),  # connector
+                    synapse_type=synapse_dynamics,
+                    source=proj_info['source'],
+                    receptor_type=DEFAULT_RECEPTOR_TYPES[proj_info['receptor_type']],
+                    space=proj_info['space'],
+                    label=conn_label
+                )
             )
-        )
 
     connectivity_data.close()
     print("Reconstruction complete!")
-    return populations, projections, custom_params
+
+    print("=" * 80)
+    print("Reports")
+    print("-" * 80)
+    write_report("Total number of neurons", total_no_neurons)
+    write_report("Total number of synapses", total_no_synapses)
+    if total_no_synapses > 0:
+        write_report("Avg fan in", total_no_synapses / total_no_neurons)
+    else:
+        write_report("Avg fan in", "NaN")
+    print("-" * 80)
+    print("Number of afferents (exc + inh)")
+    for k in no_afferents.keys():
+        print("Total afferents for {:35} : {:25}".format(
+            k,
+            format(int(no_afferents[k]), ",")))
+        print("\tthat is {:15.2f} synapses / neuron".format(
+            no_afferents[k] / all_neurons[k]))
+    print("=" * 80)
+
+    extra_params['all_neurons'] = all_neurons
+    extra_params['all_connections'] = all_connections
+    extra_params['json_dict'] = json_data
+
+    return populations, projections, extra_params
+
+
+def write_report(msg, value):
+    print("{:<50}:{:>14}".format(msg, format(int(value), ",")))
 
 
 def get_input_size(sim):
@@ -304,49 +386,168 @@ def set_i_offsets(populations, new_runtime, old_runtime=1000):
     for population in populations:
         try:
             i_offset = population.get('i_offset')
-            population.set(i_offset=get_rescaled_biases(i_offset, new_runtime))
+            population.set(i_offset=get_rescaled_i_offset(i_offset, new_runtime))
         except Exception:
             pass
-    
+
+def set_zero_i_offsets(populations):
+    for population in populations:
+        try:
+            population.set(i_offset=0)
+        except Exception:
+            pass
+
+
 def serialisation_summary(filename):
     """ Gives a human-readable output for a serialised model
     """
     # Load the data from disk
     with open(filename + ".json", "r") as read_file:
         json_data = json.load(read_file)
-    
-    print("="*10 +"Summary" +"="*10)
-    
+
+    print("=" * 10 + "Summary" + "=" * 10)
+
     no_pops = len(json_data['populations'].keys())
     no_proj = len(json_data['projections'].keys())
-    
+
     print("Number of populations: {}".format(no_pops))
     print("Number of projections: {}".format(no_proj))
-    
+
     neuron_total = 0
-    
+
     for population in json_data['populations']:
         neuron_total += json_data['populations'][population]['n_neurons']
-    
-    
+
     print("Total number of neurons: {}".format(neuron_total))
     print("\n\n")
     for population in json_data['populations']:
-        print("="*10 +"Layer" +"="*10)
+        print("=" * 10 + "Layer" + "=" * 10)
         print("Layer label:{}".format(json_data['populations'][population]['label']))
         print("Number of neurons:{}".format(json_data['populations'][population]['n_neurons']))
         print("Neuron model:{}".format(json_data['populations'][population]['cellclass']))
-        print("="*10 +"Projections" +"="*10)
+        print("=" * 10 + "Projections" + "=" * 10)
         for projection in json_data['projections']:
             if json_data['projections'][projection]['pre_id'] == json_data['populations'][population]['id']:
-                #Check this is the right way round
+                # Check this is the right way round
                 type = "inhibitory" if bool(json_data['projections'][projection]['receptor_type']) else "excitatory"
                 print("Projection {}, ({})".format(projection, type))
-                print("Projections from {} to {}".format(json_data['projections'][projection]['pre_label'], json_data['projections'][projection]['post_label']))
-        print ('\n')
-    
-if __name__ == '__main__':
-    serialisation_summary("experiments/mnist_testing/lenet_dense_IF_cond_exp_serialised")
-    
-    
-    
+                print("Projections from {} to {}".format(json_data['projections'][projection]['pre_label'],
+                                                         json_data['projections'][projection]['post_label']))
+        print('\n')
+
+
+def extract_parameters(filename, output_dir, output_type="npz"):
+    """Takes parameters from the serialised model and outputs a more human-readable directory structure.
+    """
+    import os
+
+    # Grab the files
+
+    # Objects and parameters
+    projections = []
+    populations = []
+
+    all_neurons = {}
+    total_no_neurons = 0
+
+    # Load the data from disk
+    with open(filename + ".json", "r") as read_file:
+        json_data = json.load(read_file)
+    # Load connectivity data from disk
+    connectivity_data = np.load(filename + ".npz", allow_pickle=True)
+    # the number of populations to be reconstructed is either passed in
+    # (first_n_layers) or the total number of available populations
+    no_pops = len(json_data['populations'].keys())
+    no_proj = len(json_data['projections'].keys())
+
+    if not os.path.exists(output_dir):
+        os.mkdir(output_dir)
+    os.chdir(output_dir)
+
+    # Loop over layers
+    for pop_no in range(no_pops):
+        pop_info = json_data['populations'][str(pop_no)]
+        p_id = pop_info['id']
+        pop_cellclass = pydoc.locate(pop_info['cellclass'])
+        folderName = output_dir + '/' + pop_info['label']
+        all_neurons[pop_info['label']] = pop_info['n_neurons']
+        total_no_neurons += pop_info['n_neurons']
+
+        if not os.path.exists(folderName):
+            os.mkdir(folderName)
+        os.chdir(folderName)
+
+        print("Found pop {:35}".format(pop_info['label']), "containing",
+              format(pop_info['n_neurons'], ","), "neurons")
+        # Generate txt file that defines population (number of neurons, neuron model etc.)
+        f = open("Population_description.txt", "w+")
+        for key in pop_info.keys():
+            f.write(str(key) + " : " + str(pop_info[key]) + '\n')
+
+        # Make a directory for inhibitory and excitatory projections
+        if not os.path.exists("exc_projections"):
+            os.mkdir("exc_projections")
+
+        if not os.path.exists("inh_projections"):
+            os.mkdir("inh_projections")
+
+    os.chdir(output_dir)
+
+    for proj_no in range(no_proj):
+        # temporary utility variable
+        proj_info = json_data['projections'][str(proj_no)]
+        receptor_type = DEFAULT_RECEPTOR_TYPES[proj_info['receptor_type']]
+        _type = "_exc" if receptor_type == "excitatory" else "_inh"
+        conn_label = proj_info['pre_label'] + "_to_" + proj_info['post_label'] + _type
+        if proj_info['post_label'] not in all_neurons.keys():
+            print("Aborting the creation of proj", conn_label)
+            continue
+        print("Outputting {}".format(conn_label))
+        # Go to the correct directory
+        os.chdir(proj_info['post_label'])
+        if _type == "_exc":
+            os.chdir("exc_projections")
+        elif _type == "_inh":
+            os.chdir("inh_projections")
+        else:
+            print("How did you manage to get a receptor type that isn't exc or inh?")
+
+        # Convert from_list to matrix
+        weight_matrix = convert_from_list_to_matrix(connectivity_data[str(proj_info['id'])])
+        if output_type == "npz":
+            # Write a npz
+            scipy.sparse.save_npz("connections" + _type, weight_matrix)
+        if output_type == "csv":
+            dense_matrix = weight_matrix.todense()
+            np.savetxt("connections" + _type + ".csv", dense_matrix, delimiter=",")
+        else:
+            print("Did not understand output type.")
+        # Leave
+        os.chdir(output_dir)
+
+    connectivity_data.close()
+    # Put connectivity .npz in these directories
+
+    # Is there some way to spot convolution? Probably not
+    # Actually, could you use something akin to dictionary coding:
+    # For every pre weight assign a letter to a (relative_pre_neuron_index, weight) pair
+    # This should be repeated
+    # Sounds like a lot of work
+
+
+def convert_from_list_to_matrix(from_list):
+    """Converts a from_list connector to an ANN-like connectivity matrix.
+    """
+    from scipy import sparse
+    # from_list (pre_index, post_index, weight, delay)
+    from_list = np.array(from_list)
+    mat_coo = sparse.coo_matrix((from_list[:, 2], (from_list[:, 0].astype(int), from_list[:, 1].astype(int))))
+    return mat_coo
+
+
+def main():
+    pass
+
+
+if __name__ == "__main__":
+    main()

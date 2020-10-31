@@ -1,52 +1,62 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 
 class OutputDataProcessor():
     ''' A class to represent the output of a serialised model and to
     alllow for easier processing.
     '''
-
+    #TODO fix this to take variables from serialised argparser
     def __init__(self, path):
         self.data = np.load(path, allow_pickle=True)
-        self.spikes_dict = self.reconstruct_spikes_dict()
+        self.spikes_dict = self.data['all_spikes'][()]
         self.layer_names = list(self.spikes_dict.keys())
         self.order_layer_names()
         self.input_layer_name = 'InputLayer'
         self.output_layer_name = self.layer_names[-1]
-        self.y_test = self.data['y_test']
-        self.t_stim = self.data['t_stim']
-        self.runtime = int(self.data['runtime'])
-        self.N_layer = int(self.data['N_layer'])
-        self.dt = self.data['dt']
+        self.simtime = int(self.data['simtime'])
+        self.set_dt()
         self.neo_object = self.data['neo_spikes_dict']
         self.delay = self.get_delay()
         self.input_layer_name = self.layer_names[0]
         self.output_layer_name = self.layer_names[-1]
-        self.input_layer_shape = (3238,1)
+        self.input_layer_shape = (100,1)
+        self.layer_shapes = self.get_layer_shapes()
         self.input_spikes = self.spikes_dict[self.input_layer_name]
         self.output_spikes = self.spikes_dict[self.output_layer_name]
-        self.number_of_examples = self.runtime // self.t_stim
-        self.y_test = np.array(self.data['y_test'][:self.number_of_examples], dtype=np.int8)
-        self.y_pred = np.array(self.get_batch_predictions(), dtype=np.int8) 
-        labels = np.load(
-            '/mnt/snntoolbox/snn_toolbox_private/examples/models/05-mobilenet_dwarf_v1/label_names.npz')
-        self.label_names = labels['arr_0']
-        labels.close()
-        self.layer_shapes = self.get_layer_shapes()
+        self.testing_examples = self.data['testing_examples']
+        self.t_stim = self.data['t_stim']
+        self.chunk_size =  self.data['chunk_size'] if "chunk_size" in self.data.keys() else self.testing_examples
+        self.start_index = self.data['start_index'] if "start_index" in self.data.keys() else 0
+        self.y_test = np.array(self.data['y_test'][:self.testing_examples], dtype=np.int8)
+        if len(self.y_test.shape) >1 and\
+                                        (self.y_test.shape[-1] == self.layer_shapes[-1][0] or\
+                                        self.y_test.shape[0] == self.layer_shapes[-1][0]):
+            self.y_test = self.convert_output_to_index(self.y_test)
+        self.y_pred = np.array(self.get_batch_predictions(), dtype=np.int64)
+    
+    def set_dt(self):
+        try:
+            self.dt = self.data['timestep']
+        except:
+            self.dt = 0.1
+
+    def convert_output_to_index(self, data):
+        return np.argmax(data, axis=1)
 
     def summary(self):
         print(self.layer_names)
-        print(self.number_of_examples)
+        print(self.testing_examples)
 
     def get_accuracy(self):
         import numpy as np 
-        correct_count = np.count_nonzero(self.y_test[:self.number_of_examples] == self.y_pred)
-        return correct_count /self.number_of_examples
+        correct_count = np.count_nonzero(self.y_test[:self.testing_examples] == self.y_pred)
+        return correct_count /self.testing_examples
 
     
     def get_layer_shapes(self):
         from snntoolbox.simulation.utils import get_shape_from_label
-        return [get_shape_from_label(label) if label != "InputLayer" else self.input_layer_shape for label in self.layer_names]    
+        return [get_shape_from_label(label) if label not in ["InputLayer", "corr_pop"] else self.input_layer_shape for label in self.layer_names]
     
     
     def order_layer_names(self):
@@ -79,23 +89,21 @@ class OutputDataProcessor():
 
     def get_delay(self):
         #Cannnot currently calculate model with delays other than 1 ms between layers
-
         return (len(self.layer_names) - 1) * self.dt
 
     def get_bounds(self, bin_number):
         lower_end_bin_time = bin_number * self.t_stim + self.delay
         higher_end_bin_time = (bin_number + 1) * self.t_stim + self.delay
-        if higher_end_bin_time > self.runtime:
-            higher_end_bin_time = self.runtime
-            print('Final bin cut off.')
+        if higher_end_bin_time > self.simtime:
+            higher_end_bin_time = self.simtime
+            #print('Final bin cut off.')
         return lower_end_bin_time, higher_end_bin_time
 
     def get_bin_spikes(self, bin_number, layer_name):
         '''Returns the spike train data for a given layer and bin'''
         lower_end_bin_time, higher_end_bin_time = self.get_bounds(bin_number)
         spikes = self.spikes_dict[layer_name]
-        output = spikes[np.where((spikes[:, 1] >= lower_end_bin_time) & (
-            spikes[:, 1] < higher_end_bin_time))]
+        output = spikes[np.where((spikes[:, 1] >= lower_end_bin_time) & (spikes[:, 1] < higher_end_bin_time))]
         output = np.asarray(output).astype(int)
         return output
     
@@ -142,33 +150,61 @@ class OutputDataProcessor():
             return -1
 
     def get_batch_predictions(self):
-        y_pred = np.ones(self.number_of_examples) * (-1)
-        for bin_number in range(self.number_of_examples):
+        y_pred = np.ones(self.chunk_size) * (-1)
+        for bin_number in range(self.chunk_size):
             y_pred[bin_number] = self.get_prediction(
                 bin_number, self.output_layer_name)
         return y_pred
 
     def plot_output(self, bin_number):
-        if bin_number > self.number_of_examples: 
+        if bin_number > self.self.chunk_size:
             raise Exception('bin_number greater than number_of_examples')
-            bin_number = self.number_of_examples-1
-        output_spikes = self.get_counts(bin_number, self.output_layer_name, 10)
+            bin_number = self.chunk_size - 1
+        output_spikes = self.get_counts(bin_number, self.output_layer_name, 8)
         if hasattr(self, 'label_names'):
             label_names = [name.decode('utf-8') for name in self.label_names]
-            plt.bar(label_names, output_spikes)
+            plt.xlabel(label_names)
+        plt.bar(range(len(output_spikes)), output_spikes)
         plt.xticks(rotation=90)
+        plt.show()
 
     def get_accuracy(self):
-        actual_test_labels = self.y_test[:self.number_of_examples].ravel()
+        actual_test_labels = self.y_test[self.start_index:self.start_index+self.chunk_size].ravel()
         y_pred = self.get_batch_predictions()
-        return np.count_nonzero(y_pred==actual_test_labels)/float(self.number_of_examples)
+        return np.count_nonzero(y_pred==actual_test_labels)/float(self.chunk_size)
 
     def bin_summary(self, bin_number):
         self.plot_output(bin_number)
         self.plot_bin(bin_number, self.output_layer_name)
 
-        
-        
-        
-        
-        
+    def save_spiketrain(self, output_folder='spiketrain_csvs'):
+
+        if not os.path.exists(output_folder):
+            os.makedirs(output_folder)
+
+        for i in range(self.chunk_size):
+            input = self.get_bin_spikes(i, self.layer_names[0])
+            output = self.get_bin_spikes(i, self.layer_names[-1])
+            offset = i*self.t_stim
+            input[:,1] = input[:,1]-offset
+            output[:, 1] = output[:, 1] - offset
+
+            np.savetxt(output_folder+"/example_{}_input.csv".format(self.start_index+i), input, delimiter=',')
+            np.savetxt(output_folder+"/example_{}_output.csv".format(self.start_index+i), output, delimiter=',')
+
+    def plot_confusion_matrix(self):
+        from sklearn.metrics import confusion_matrix
+
+        cm = confusion_matrix(self.y_test, self.y_pred)
+        plt.imshow(cm)
+        plt.xlabel("True label")
+        plt.xticks(range(np.argmax(self.y_test)))
+        plt.ylabel("Predicted label")
+        plt.yticks(range(np.argmax(self.y_test)))
+        plt.show()
+        print(cm)
+
+if __name__ == "__main__":
+    import OutputDataProcessor_argparser
+    args = OutputDataProcessor_argparser.main()
+    print(OutputDataProcessor(args.data_file).get_accuracy())
