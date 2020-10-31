@@ -4,7 +4,7 @@ import pydoc  # used to retrieve Class from string
 import numpy as np
 import pynn_object_serialisation.serialisation_utils as utils
 from spynnaker8.extra_models import SpikeSourcePoissonVariable
-from spynnaker8 import SpikeSourceArray, SpikeSourcePoisson
+from spynnaker8 import SpikeSourceArray, SpikeSourcePoisson, IF_curr_delta
 from pprint import pprint as pp
 from colorama import Fore, Style, init as color_init
 import scipy
@@ -125,18 +125,20 @@ def intercept_simulator(sim, output_filename=None, cellparams=None,
         import sys
         sys.exit()
 
+# TODO remove redundant input_type args
 
 def restore_simulator_from_file(sim, filename, prune_level=1.,
                                 input_type=None,
                                 is_input_vrpss=False,
                                 vrpss_cellparams=None,
                                 ssa_cellparams=None,
-                                replace_params=None, n_boards_required=None,
-                                time_scale_factor=None, first_n_layers=None,
-                                replace_setup_params=None,
-                                timestep=1.0
+                                replace_params=None,
+                                first_n_layers=None,
+                                timestep=1.0,
+                                delta_input=False
                                 ):
     replace_params = replace_params or {}
+
     if is_input_vrpss:
         input_type = 'vrpss'
     if input_type != "vrpss" and vrpss_cellparams:
@@ -158,20 +160,6 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
     # (first_n_layers) or the total number of available populations
     no_pops = first_n_layers or len(json_data['populations'].keys())
     no_proj = len(json_data['projections'].keys())
-    # setup
-    setup_params = json_data['setup']
-    for key in replace_setup_params:
-        setup_params[key] = replace_setup_params[key]
-
-    #Just to fix min delay being too small.
-    if setup_params['min_delay']<setup_params['machine_time_step']:
-        setup_params['min_delay'] = setup_params['machine_time_step']/1000
-    # TODO move setup outside into whatever experiment is run
-    sim.setup(setup_params['machine_time_step'] / 1000.,
-              setup_params['min_delay'],
-              setup_params['max_delay'],
-              n_boards_required=n_boards_required,
-              time_scale_factor=time_scale_factor)
 
     extra_params = {}
     try:
@@ -218,8 +206,9 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
         elif pop_cellclass is SpikeSourcePoissonVariable:
             pop_cellparams = connectivity_data[pop_info['cellparams']].ravel()[0]
         else:
-            pop_cellparams = \
-                connectivity_data[str(p_id)].ravel()[0]
+            if delta_input:
+                pop_cellclass = IF_curr_delta
+                pop_cellparams = {**pop_cellclass.default_initial_values, **pop_cellclass.default_parameters}
 
         for k in replace_params.keys():
             if k in pop_cellparams.keys():
@@ -255,6 +244,17 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
         # id of projection used to retrieve from list connectivity
         _conn = utils._prune_connector(connectivity_data[str(proj_info['id'])],
                                        prune_level=prune_level)
+
+        #TODO These values should come from the original model values
+        # tau_syn_E = 0.02
+        # tau_syn_I = 0.02
+        # # just to give a sensible answer if tau_syn_E and I are different
+        # t = timestep
+        # tau = (tau_syn_E + tau_syn_I) / 2
+        # scale = t / (10 * tau * (np.exp(-(t / tau)) + 1))
+        # print('Weights scaled by a factor of {0}'.format(1/scale, ))
+
+        #_conn = utils._scale_and_cast_weights(_conn, 1/scale)
 
         # build synapse dynamics
         synapse_dynamics = utils._build_synapse_info(sim, proj_info, timestep)
@@ -386,7 +386,14 @@ def set_i_offsets(populations, new_runtime, old_runtime=1000):
     for population in populations:
         try:
             i_offset = population.get('i_offset')
-            population.set(i_offset=get_rescaled_biases(i_offset, new_runtime))
+            population.set(i_offset=get_rescaled_i_offset(i_offset, new_runtime))
+        except Exception:
+            pass
+
+def set_zero_i_offsets(populations):
+    for population in populations:
+        try:
+            population.set(i_offset=0)
         except Exception:
             pass
 

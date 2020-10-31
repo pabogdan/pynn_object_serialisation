@@ -15,6 +15,8 @@ from pynn_object_serialisation.experiments.batch_argparser import *
 import shutil
 import ntpath
 
+# TODO deprecate/remove this
+
 if not args.model_script:
     raise AttributeError("You need to specify the path to the script to run ("
                          "e.g. mnist_testing.py or imagenet_testing.py)")

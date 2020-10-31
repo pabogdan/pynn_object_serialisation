@@ -92,3 +92,8 @@ def _prune_connector(conn, prune_level=1):
     cutoff_number = int(conn.shape[0] * prune_level)
     conn = conn[descending_argsort[:cutoff_number]]
     return conn
+
+def _scale_and_cast_weights(conn, multiplier):
+    conn[:,2] = conn[:,2]*multiplier
+    conn[:,2] = conn[:,2].astype(np.int8)
+    return conn
