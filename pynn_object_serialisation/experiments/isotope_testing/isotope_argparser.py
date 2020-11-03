@@ -4,6 +4,7 @@ import argparse
 batch_size = 50
 epochs = 20
 
+DEFAULT_ROOT_DIR = ''
 DEFAULT_DATA_DIR = 'data/'
 DEFAULT_MODEL_DIR = 'models/'
 DEFAULT_RESULT_DIR = 'results/'
@@ -28,6 +29,9 @@ parser = argparse.ArgumentParser(
 
 parser.add_argument('model', type=str,
                     help='network architecture / model to train and test')
+
+parser.add_argument('--root_dir', type=str,
+                    help='the root directory for execution',default=DEFAULT_ROOT_DIR)
 
 parser.add_argument('-o', '--output', type=str,
                     help="name of the numpy archive (.npz) "

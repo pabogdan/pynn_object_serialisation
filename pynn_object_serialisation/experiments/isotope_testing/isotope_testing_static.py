@@ -35,7 +35,7 @@ def signal_handler(signal, frame):
     sys.exit(0)
 
 def generate_run_folder_from_params(args):
-    folder_details = "/model_name_{}_t_stim_{}_rate_scaling_{}_tsf_{}_testing_examples_{}_dt_{}".format \
+    folder_details = "{}_t_stim_{}_rate_scaling_{}_tsf_{}_testing_examples_{}_dt_{}".format \
         (args.model, args.t_stim, args.rate_scaling, args.time_scale_factor, args.testing_examples, args.timestep)
     return folder_details
 
@@ -91,8 +91,8 @@ def run(args, start_index):
     g = open(g_name, 'w')
     old_stdout = sys.stdout
     old_stderr = sys.stderr
-    sys.stdout = f
-    sys.stderr = g
+    #sys.stdout = f
+    #sys.stderr = g
 
     # Checking directory structure exists
     if not os.path.isdir(
@@ -110,9 +110,7 @@ def run(args, start_index):
     
     from pathlib import Path
     from os import getcwd
-    path = str(Path(getcwd()).parent) + '/'
-    
-    path = "/home/edwardjones/git/RadioisotopeDataToolbox/"
+
     input_params = convert_rate_array_to_VRPSS(x_test[start_index:start_index+args.testing_examples],
                                                max_rate=args.rate_scaling, duration=args.t_stim)
 
@@ -146,10 +144,10 @@ def run(args, start_index):
               'tau_syn_I': 0.02,
               'delay': 0}
 
-
     populations, projections, extra_params = restore_simulator_from_file(
-        sim, args.model,
+        sim, os.path.join(args.root_dir,args.model),
         input_type='vrpss',
+        is_input_vrpss=True,
         vrpss_cellparams=input_params,
         replace_params=replace,
         delta_input=args.delta)
@@ -242,7 +240,7 @@ def main(args=None):
 
     from pynn_object_serialisation.OutputDataProcessor import OutputDataProcessor
     sub_folder_name = generate_run_folder_from_params(args)
-    args.result_dir += sub_folder_name
+    args.result_dir =  os.path.join(args.root_dir, args.result_dir, sub_folder_name)
 
     # Checking directory structure exists
     if not os.path.isdir(args.result_dir) and not os.path.exists(args.result_dir):
@@ -252,7 +250,7 @@ def main(args=None):
         os.makedirs('errorlog')
 
     # Make a pool
-    p = multiprocessing.Pool(args.number_of_processes)
+#    p = multiprocessing.Pool(args.number_of_processes)
     #assert args.testing_examples % args.chunk_size == 0, "Number of testing examples should multiple of chunk_size"
 
     args.testing_examples//args.chunk_size
@@ -263,8 +261,9 @@ def main(args=None):
     mod_arg.chunk_size = remainder
     test_and_chunks = [[args, x] if x != final_chunk_start else [mod_arg, x] for x in chunks]
 
+    run(args, 0)
     # Run the pool
-    p.starmap(run, test_and_chunks)
+    #p.starmap(run, test_and_chunks)
 
     print("Simulations complete")
 
