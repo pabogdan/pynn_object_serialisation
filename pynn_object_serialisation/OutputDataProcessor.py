@@ -207,4 +207,8 @@ class OutputDataProcessor():
 if __name__ == "__main__":
     import OutputDataProcessor_argparser
     args = OutputDataProcessor_argparser.main()
-    print(OutputDataProcessor(args.data_file).get_accuracy())
+    proc = OutputDataProcessor(args.data_file)
+    print(proc.get_accuracy())
+    if args.return_spiketrains:
+        proc.save_spiketrain()
+
