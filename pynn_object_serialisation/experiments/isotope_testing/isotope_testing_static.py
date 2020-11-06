@@ -91,8 +91,8 @@ def run(args, start_index):
     g = open(g_name, 'w')
     old_stdout = sys.stdout
     old_stderr = sys.stderr
-    #sys.stdout = f
-    #sys.stderr = g
+    # sys.stdout = f
+    # sys.stderr = g
 
     # Checking directory structure exists
     if not os.path.isdir(
@@ -105,14 +105,21 @@ def run(args, start_index):
     x_test = np.load(args.data_dir +"x_test.npz")['arr_0']
     y_test = np.load(args.data_dir +"y_test.npz")['arr_0']
 
-    replace = None       
-    runtime = args.t_stim * args.testing_examples
-    
-    from pathlib import Path
-    from os import getcwd
+
+    if args.shuffle_data:
+        assert len(x_test) == len(y_test)
+        p = np.random.permutation(len(y_test))
+        x_test = x_test[p]
+        y_test = y_test[p]
+
+
+    max_rate = args.rate_scaling
+
+    if args.prescaled_data:
+        max_rate = 1
 
     input_params = convert_rate_array_to_VRPSS(x_test[start_index:start_index+args.testing_examples],
-                                               max_rate=args.rate_scaling, duration=args.t_stim)
+                                               max_rate=max_rate, duration=args.t_stim)
 
     timestep = args.timestep
     timescale = args.time_scale_factor
@@ -159,8 +166,8 @@ def run(args, start_index):
     max_delay = sim.get_max_delay()
     sim.set_number_of_neurons_per_core(SpikeSourcePoissonVariable, 16)
     sim.set_number_of_neurons_per_core(sim.SpikeSourcePoisson, 16)
-    sim.set_number_of_neurons_per_core(sim.IF_curr_exp, 128)
-    sim.set_number_of_neurons_per_core(sim.IF_cond_exp, 128)
+    sim.set_number_of_neurons_per_core(sim.IF_curr_exp, 64)
+    sim.set_number_of_neurons_per_core(sim.IF_cond_exp, 64)
     old_runtime = extra_params['simtime'] if 'simtime' in extra_params else None
     #set_i_offsets(populations, runtime, old_runtime=old_runtime)
     set_zero_i_offsets(populations)
@@ -260,7 +267,11 @@ def main(args=None):
     test_and_chunks = [[args, x] if x != final_chunk_start else [mod_arg, x] for x in chunks]
 
     # Run the pool
-    p.starmap(run, test_and_chunks)
+    if args.number_of_processes != 1:
+        p.starmap(run, test_and_chunks)
+    else:
+        for args, index in test_and_chunks:
+            run(args, index)
 
     print("Simulations complete")
 

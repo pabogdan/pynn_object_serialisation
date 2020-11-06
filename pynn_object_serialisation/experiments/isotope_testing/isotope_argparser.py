@@ -138,6 +138,14 @@ parser.add_argument('--force_resim',
                     help='should present results in result directory be ignored and overwritten?',
                     action="store_true")
 
+parser.add_argument('--prescaled_data',
+                    help='Is the data already scaled to a certain frequency that you want to keep?',
+                    action="store_true")
+
+parser.add_argument('--shuffle_data',
+                    help='Should the data be shuffled so that examples are presented in a random order?',
+                    action="store_true")
+
 parser.add_argument('--retrieve_connectivity',
                     help='Should we retrieve the connectivity from SpiNNaker?',
                     action="store_true")
