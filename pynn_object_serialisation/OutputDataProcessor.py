@@ -134,7 +134,12 @@ class OutputDataProcessor():
 
     def plot_bin(self, bin_number, layer_name, shape = (10,1)):
         self.plot_rates(self.get_rates(bin_number, layer_name, np.product(shape)), shape)
-        
+
+    def plot_histogram(self, bin_mumber, layer_index):
+        spikes = self.get_counts(bin_mumber, self.layer_names[layer_index])
+        plt.hist(spikes)
+        plt.show()
+
     def plot_spikes(self, bin_number, layer_index):
         
         spikes = self.get_spikes_event_format(bin_number, layer_index)
@@ -157,7 +162,7 @@ class OutputDataProcessor():
         return y_pred
 
     def plot_output(self, bin_number):
-        if bin_number > self.self.chunk_size:
+        if bin_number > self.chunk_size:
             raise Exception('bin_number greater than number_of_examples')
             bin_number = self.chunk_size - 1
         output_spikes = self.get_counts(bin_number, self.output_layer_name, 8)
