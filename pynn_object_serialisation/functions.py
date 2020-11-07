@@ -505,6 +505,8 @@ def extract_parameters(filename, output_dir, output_type="npz"):
         projections = [json_data['projections'][projection] for projection in json_data['projections']
                        if (json_data['projections'][projection]['pre_id'] == pre_id and json_data['projections'][projection]['post_id'] == post_id and json_data['projections'][projection]['id'] != proj_id)]
 
+        if len(projections) ==0:
+            return None
         assert len(projections) == 1
         return projections[0]['id']
 
@@ -529,8 +531,12 @@ def extract_parameters(filename, output_dir, output_type="npz"):
 
         # Convert from_list to matrix
         complementary = get_complementary_projection_id(json_data, proj_info)
-        complementary_max_indices = connectivity_data[str(complementary)].max(axis=0)[:2]
         current_max_indices = connectivity_data[str(proj_info['id'])].max(axis=0)[:2]
+        if complementary is None:
+            complementary_max_indices == current_max_indices
+            print("Found a projection with no complementary projection, likely because there are only excitatory connections")
+        else:
+            complementary_max_indices = connectivity_data[str(complementary)].max(axis=0)[:2]
         shape = np.vstack([complementary_max_indices, current_max_indices]).max(axis=0).astype('int')+1
         print("Shape {}".format(shape))
         weight_matrix = convert_from_list_to_matrix(connectivity_data[str(proj_info['id'])], shape)
