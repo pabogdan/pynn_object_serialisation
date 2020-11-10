@@ -7,7 +7,7 @@ class OutputDataProcessor():
     alllow for easier processing.
     '''
     #TODO fix this to take variables from serialised argparser
-    def __init__(self, path):
+    def __init__(self, path, input_shape=(1024,1)):
         self.data = np.load(path, allow_pickle=True)
         self.spikes_dict = self.data['all_spikes'][()]
         self.layer_names = list(self.spikes_dict.keys())
@@ -20,7 +20,7 @@ class OutputDataProcessor():
         self.delay = self.get_delay()
         self.input_layer_name = self.layer_names[0]
         self.output_layer_name = self.layer_names[-1]
-        self.input_layer_shape = (100,1)
+        self.input_layer_shape = input_shape
         self.layer_shapes = self.get_layer_shapes()
         self.input_spikes = self.spikes_dict[self.input_layer_name]
         self.output_spikes = self.spikes_dict[self.output_layer_name]
