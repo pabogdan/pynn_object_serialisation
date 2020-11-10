@@ -81,7 +81,7 @@ parser.add_argument('--model_dir', type=str,
                     default=DEFAULT_MODEL_DIR)
 
 parser.add_argument('--result_dir', type=str,
-                    help='directory inp which to load and '
+                    help='directory in which to load and '
                          'store network architectures',
                     default=DEFAULT_RESULT_DIR)
 
