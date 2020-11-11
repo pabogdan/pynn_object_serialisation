@@ -435,6 +435,22 @@ def serialisation_summary(filename):
                                                          json_data['projections'][projection]['post_label']))
         print('\n')
 
+def get_complementary_projection_id(json_data, input_projection):
+    """Finds the complementary projection for a given projection"""
+
+    pre_id = input_projection['pre_id']
+    post_id = input_projection['post_id']
+    proj_id = input_projection['id']
+
+    # Pretty ridiculous list comprehension...
+    projections = [json_data['projections'][projection] for projection in json_data['projections']
+                   if (json_data['projections'][projection]['pre_id'] == pre_id and json_data['projections'][projection]['post_id'] == post_id and json_data['projections'][projection]['id'] != proj_id)]
+
+    if len(projections) ==0:
+        return None
+    assert len(projections) == 1
+    return projections[0]['id']
+
 
 def extract_parameters(filename, output_dir, output_type="npz"):
     """Takes parameters from the serialised model and outputs a more human-readable directory structure.
@@ -493,22 +509,6 @@ def extract_parameters(filename, output_dir, output_type="npz"):
             os.mkdir("inh_projections")
 
     os.chdir(output_dir)
-
-    def get_complementary_projection_id(json_data, input_projection):
-        """Finds the complementary projection for a given projection"""
-
-        pre_id = input_projection['pre_id']
-        post_id = input_projection['post_id']
-        proj_id = input_projection['id']
-
-        # Pretty ridiculous list comprehension...
-        projections = [json_data['projections'][projection] for projection in json_data['projections']
-                       if (json_data['projections'][projection]['pre_id'] == pre_id and json_data['projections'][projection]['post_id'] == post_id and json_data['projections'][projection]['id'] != proj_id)]
-
-        if len(projections) ==0:
-            return None
-        assert len(projections) == 1
-        return projections[0]['id']
 
     for proj_no in range(no_proj):
         # temporary utility variable
@@ -572,9 +572,86 @@ def convert_from_list_to_matrix(from_list, shape):
     return mat_coo
 
 
+def projections_to_matrix(filename):
+    """Takes parameters a serialised model and outputs a list of weight matrices."""
+
+    # Objects and parameters
+    projections = []
+    populations = []
+
+    weights = []
+    all_neurons = {}
+    total_no_neurons = 0
+
+    # Load the data from disk
+    with open(filename + ".json", "r") as read_file:
+        json_data = json.load(read_file)
+    # Load connectivity data from disk
+    connectivity_data = np.load(filename + ".npz", allow_pickle=True)
+    # the number of populations to be reconstructed is either passed in
+    # (first_n_layers) or the total number of available populations
+    no_pops = len(json_data['populations'].keys())
+    no_proj = len(json_data['projections'].keys())
+
+    print('{} populations found'.format(no_pops))
+    print('{} projections found'.format(no_proj))
+
+    # Loop over layers
+    for pop_no in range(no_pops):
+        pop_info = json_data['populations'][str(pop_no)]
+        p_id = pop_info['id']
+        pop_cellclass = pydoc.locate(pop_info['cellclass'])
+        all_neurons[pop_info['label']] = pop_info['n_neurons']
+        total_no_neurons += pop_info['n_neurons']
+
+        print("Found pop {:35}".format(pop_info['label']), "containing",
+              format(pop_info['n_neurons'], ","), "neurons")
+
+    dealt_with_projections = []
+    for proj_no in range(no_proj):
+        # temporary utility variable
+        proj_info = json_data['projections'][str(proj_no)]
+        if proj_info['id'] in dealt_with_projections:
+            continue
+
+        receptor_type = DEFAULT_RECEPTOR_TYPES[proj_info['receptor_type']]
+        _type = "_exc" if receptor_type == "excitatory" else "_inh"
+        conn_label = proj_info['pre_label'] + "_to_" + proj_info['post_label'] + _type
+        if proj_info['post_label'] not in all_neurons.keys():
+            print("Aborting the creation of proj", conn_label)
+            continue
+
+        # Convert from_list to matrix
+        complementary = get_complementary_projection_id(json_data, proj_info)
+        current_max_indices = connectivity_data[str(proj_info['id'])].max(axis=0)[:2]
+        if complementary is None:
+            complementary_max_indices == current_max_indices
+            print("Found a projection with no complementary projection, likely because there are only excitatory connections")
+            shape = current_max_indices +1
+        else:
+            complementary_max_indices = connectivity_data[str(complementary)].max(axis=0)[:2]
+            shape = np.vstack([complementary_max_indices, current_max_indices]).max(axis=0).astype('int')+1
+            complementary_weight_matrix = convert_from_list_to_matrix(connectivity_data[str(complementary)], shape)
+            dense_complementary_matrix = complementary_weight_matrix.todense()
+            dealt_with_projections.append(complementary)
+
+        print("Shape {}".format(shape))
+        weight_matrix = convert_from_list_to_matrix(connectivity_data[str(proj_info['id'])], shape)
+        dense_matrix = weight_matrix.todense()
+        if complementary is not None:
+            dense_matrix = dense_matrix + dense_complementary_matrix
+        print("Output_shape {}".format(dense_matrix.shape))
+        weights.append(dense_matrix)
+        dealt_with_projections.append(proj_info['id'])
+
+
+    connectivity_data.close()
+    return weights
+
+
+
 def main():
     pass
-
 
 if __name__ == "__main__":
     main()
