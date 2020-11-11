@@ -568,7 +568,7 @@ def convert_from_list_to_matrix(from_list, shape):
     from scipy import sparse
     # from_list (pre_index, post_index, weight, delay)
     from_list = np.array(from_list)
-    mat_coo = sparse.coo_matrix((from_list[:, 2], (from_list[:, 0].astype(int), from_list[:, 1].astype(int))), shape =tuple(shape.astype('int')))
+    mat_coo = sparse.coo_matrix((from_list[:, 2], (from_list[:, 0].astype(int), from_list[:, 1].astype(int))), shape = tuple(shape.astype('int')))
     return mat_coo
 
 
@@ -630,7 +630,7 @@ def projections_to_matrix(filename):
             shape = current_max_indices +1
         else:
             complementary_max_indices = connectivity_data[str(complementary)].max(axis=0)[:2]
-            shape = np.vstack([complementary_max_indices, current_max_indices]).max(axis=0).astype('int')+1
+            shape = np.vstack([complementary_max_indices, current_max_indices]).max(axis=0).astype('int') +1
             complementary_weight_matrix = convert_from_list_to_matrix(connectivity_data[str(complementary)], shape)
             dense_complementary_matrix = complementary_weight_matrix.todense()
             dealt_with_projections.append(complementary)
@@ -649,9 +649,16 @@ def projections_to_matrix(filename):
     return weights
 
 
+def distill_weight_matrices(weights, conv_filter_size, conv_layer_size, pooling_size, pooling_layer_size):
+    weights[0] = weights[0][:conv_filter_size, list(np.arange(0, weights[0].shape[1], conv_layer_size))]
+    weights[-2] = weights[-2][:pooling_size, list(np.arange(0, weights[-2].shape[1], pooling_layer_size))]
+
+    return weights
 
 def main():
-    pass
+    # weights = projections_to_matrix('/home/edwardjones/git/RadioisotopeDataToolbox/radioisotopedatatoolbox/scripts/1D_CNN/results/models/pooling_16_fold_4_production/SNN/pooling_size_16_to_16_1000_5_10.pickleCNN_5_4_16_q_model_fold_4_reconstructed_pool_play_serialised_pooling_rescaled')
+    # weights = distill_weight_matrices(weights, 5, 1020, 16,252)
+    # print(weights)
 
 if __name__ == "__main__":
     main()
