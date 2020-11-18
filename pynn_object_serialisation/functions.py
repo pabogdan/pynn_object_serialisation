@@ -639,6 +639,7 @@ def projections_to_matrix(filename):
         weight_matrix = convert_from_list_to_matrix(connectivity_data[str(proj_info['id'])], shape)
         dense_matrix = weight_matrix.todense()
         if complementary is not None:
+            assert len(np.where((dense_matrix!=0) & (dense_complementary_matrix!=0))[0]) == 0
             dense_matrix = dense_matrix + dense_complementary_matrix
         print("Output_shape {}".format(dense_matrix.shape))
         weights.append(dense_matrix)

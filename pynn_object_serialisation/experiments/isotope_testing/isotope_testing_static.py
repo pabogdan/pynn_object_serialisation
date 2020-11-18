@@ -112,6 +112,10 @@ def run(args, start_index):
         x_test = x_test[p]
         y_test = y_test[p]
 
+    if args.testing_examples == 1:
+        index = np.argwhere(y_test == args.label_to_test)[0]
+        x_test = x_test[index]
+        y_test = y_test[index]
 
     max_rate = args.rate_scaling
 
@@ -134,9 +138,9 @@ def run(args, start_index):
 
     sim.set_number_of_neurons_per_core(SpikeSourcePoissonVariable, 16)
     sim.set_number_of_neurons_per_core(sim.SpikeSourcePoisson, 16)
-    sim.set_number_of_neurons_per_core(sim.IF_curr_exp, 64)
-    sim.set_number_of_neurons_per_core(sim.IF_cond_exp, 64)
-    sim.set_number_of_neurons_per_core(sim.IF_curr_delta, 64)
+    sim.set_number_of_neurons_per_core(sim.IF_curr_exp, 16)
+    sim.set_number_of_neurons_per_core(sim.IF_cond_exp, 16)
+    sim.set_number_of_neurons_per_core(sim.IF_curr_delta, 16)
 
     v_reset = 0
 

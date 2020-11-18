@@ -18,6 +18,7 @@ DEFAULT_CHUNK_SIZE = 1
 DEFAULT_NUMBER_OF_PROCESSES = 1
 DEFAULT_TIME_SCALE_FACTOR = 100
 DEFAULT_TIMESTEP = 1
+DEFAULT_LABEL = 0
 
 DEFAULT_THRESH = 1 #not yet implemented
 
@@ -145,6 +146,10 @@ parser.add_argument('--prescaled_data',
 parser.add_argument('--shuffle_data',
                     help='Should the data be shuffled so that examples are presented in a random order?',
                     action="store_true")
+
+parser.add_argument('--label_to_test', type=int,
+                    help='in the case of presenting one example, which class should it be?',
+                    default=DEFAULT_LABEL)
 
 parser.add_argument('--retrieve_connectivity',
                     help='Should we retrieve the connectivity from SpiNNaker?',
