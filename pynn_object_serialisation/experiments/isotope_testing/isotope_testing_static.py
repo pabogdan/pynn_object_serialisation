@@ -91,8 +91,8 @@ def run(args, start_index):
     g = open(g_name, 'w')
     old_stdout = sys.stdout
     old_stderr = sys.stderr
-    # sys.stdout = f
-    # sys.stderr = g
+    sys.stdout = f
+    sys.stderr = g
 
     # Checking directory structure exists
     if not os.path.isdir(
@@ -170,8 +170,9 @@ def run(args, start_index):
     max_delay = sim.get_max_delay()
     sim.set_number_of_neurons_per_core(SpikeSourcePoissonVariable, 16)
     sim.set_number_of_neurons_per_core(sim.SpikeSourcePoisson, 16)
-    sim.set_number_of_neurons_per_core(sim.IF_curr_exp, 64)
-    sim.set_number_of_neurons_per_core(sim.IF_cond_exp, 64)
+    sim.set_number_of_neurons_per_core(sim.IF_curr_exp, 16)
+    sim.set_number_of_neurons_per_core(sim.IF_cond_exp, 16)
+    sim.set_number_of_neurons_per_core(sim.IF_curr_delta, 16)
     old_runtime = extra_params['simtime'] if 'simtime' in extra_params else None
     #set_i_offsets(populations, runtime, old_runtime=old_runtime)
     set_zero_i_offsets(populations)
