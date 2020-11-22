@@ -95,5 +95,10 @@ def _prune_connector(conn, prune_level=1):
 
 def _scale_and_cast_weights(conn, multiplier):
     conn[:,2] = conn[:,2]*multiplier
-    conn[:,2] = conn[:,2].astype(np.int8)
+    conn[:,2] = conn[:,2].astype(np.uint8)
+    return conn
+
+def _replace_and_cast_weights(conn, value):
+    conn[:,2] = value
+    conn[:,2] = conn[:,2].astype(np.uint8)
     return conn
