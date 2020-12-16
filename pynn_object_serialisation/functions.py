@@ -31,7 +31,7 @@ def intercept_simulator(sim, output_filename=None, cellparams=None,
     # save setup info
     network_dict['setup']['machine_time_step'] = current_simulator.machine_time_step
     network_dict['setup']['min_delay'] = current_simulator.min_delay
-    network_dict['setup']['max_delay'] = current_simulator.max_delay
+#    network_dict['setup']['max_delay'] = current_simulator.max_delay #Something has changed in the codebase that makes this fail
 
     # Linking dicts
     _id_to_count = {}
@@ -175,7 +175,7 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
     all_neurons = {}
     all_connections = {}
     print("Population reconstruction begins...")
-    for pop_no in range(no_pops):
+    for i, pop_no in enumerate(range(no_pops)):
         pop_info = json_data['populations'][str(pop_no)]
         p_id = pop_info['id']
         pop_cellclass = pydoc.locate(pop_info['cellclass'])
@@ -206,13 +206,16 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
         elif pop_cellclass is SpikeSourcePoissonVariable:
             pop_cellparams = connectivity_data[pop_info['cellparams']].ravel()[0]
         else:
-            if delta_input:
+            if delta_input: #IF_curr_delta thresholds etc always have to be passed as replace_params
                 pop_cellclass = IF_curr_delta
                 pop_cellparams = {**pop_cellclass.default_initial_values, **pop_cellclass.default_parameters}
 
-        for k in replace_params.keys():
-            if k in pop_cellparams.keys():
-                pop_cellparams[k] = replace_params[k]
+            for k in replace_params.keys():
+                if k == 'v_thresh' and len(replace_params['v_thresh']) == no_pops - 1:
+                    pop_cellparams[k] = replace_params[k][i-1]
+                    continue
+                if k in pop_cellparams.keys():
+                    pop_cellparams[k] = replace_params[k]
 
         no_afferents[pop_info['label']] = 0
         all_neurons[pop_info['label']] = pop_info['n_neurons']
