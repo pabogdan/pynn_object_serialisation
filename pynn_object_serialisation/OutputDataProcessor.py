@@ -77,7 +77,7 @@ class SpikeData(object):
         shape = self.layer_shapes[layer_index]
         layer_name = self.layer_names[layer_index]
         spikes = Spiketrain(self.spikes_dict[layer_name])
-        bin_spikes = spikes.get_bin_spikes(bin_number, parameters.duration, parameters.delay)
+        bin_spikes = spikes.get_spikes(bin_number, parameters.duration, parameters.delay)
         spikes = [list() for _ in range(shape[0])]
         for spike in bin_spikes:
             spikes[spike[0]].append(spike[1])
@@ -93,8 +93,8 @@ class SpikeData(object):
             os.makedirs(output_folder)
 
         for i in range(chunk_size):
-            input = Spiketrain(self.spikes_dict(self.layer_names[0])).get_bin_spikes(i, duration, delay)
-            output = Spiketrain(self.spikes_dict(self.layer_names[-1])).get_bin_spikes(i, duration, delay)
+            input = Spiketrain(self.spikes_dict(self.layer_names[0])).get_spikes(i, duration, delay)
+            output = Spiketrain(self.spikes_dict(self.layer_names[-1])).get_spikes(i, duration, delay)
             offset = i*duration
             input[:,1] = input[:,1]-offset
             output[:, 1] = output[:, 1] - offset
@@ -112,12 +112,9 @@ class Spiketrain(object):
     def get_bounds(self, bin_number, duration, delay):
         lower_end_bin_time = bin_number * duration + delay
         higher_end_bin_time = (bin_number + 1) * duration + delay
-        if higher_end_bin_time > duration:
-            higher_end_bin_time = duration
-            #print('Final bin cut off.')
         return lower_end_bin_time, higher_end_bin_time
 
-    def get_bin_spikes(self, bin_number, duration, delay):
+    def get_spikes(self, bin_number, duration, delay):
         '''Returns the spike train data for a given bin'''
         lower_end_bin_time, higher_end_bin_time = self.get_bounds(bin_number, duration, delay)
         output = self.spikes[np.where((self.spikes[:, 1] >= lower_end_bin_time) \
@@ -127,7 +124,7 @@ class Spiketrain(object):
 
     def get_counts(self, bin_number, duration, delay, minlength=10):
         '''Returns the counts per neuron per bin in a given layer'''
-        spikes = self.get_bin_spikes(bin_number, duration, delay)
+        spikes = self.get_spikes(bin_number, duration, delay)
         just_spikes = spikes.reshape((-1, 2))[:, 0]
         counts = np.bincount(just_spikes, minlength=minlength)
         return counts
