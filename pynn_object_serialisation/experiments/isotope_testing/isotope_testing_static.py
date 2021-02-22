@@ -15,7 +15,6 @@ import pylab as plt
 from pynn_object_serialisation.functions import \
     restore_simulator_from_file, set_i_offsets, set_zero_i_offsets
 from spynnaker8.extra_models import SpikeSourcePoissonVariable
-from radioisotopedatatoolbox.DataGenerator import RandomIsotopeFlyBys
 import numpy as np
 import os
 import sys
