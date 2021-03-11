@@ -373,7 +373,7 @@ def get_params_from_serialisation(sim, key):
             print(pop_cellparams[key])
         except Exception:
             print("Param {} not found".format(key))
-    return params
+    return
 
 
 def get_rescaled_i_offset(i_offset, new_runtime, old_runtime=1000):
