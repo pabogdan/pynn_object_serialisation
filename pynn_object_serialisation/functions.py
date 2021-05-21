@@ -211,7 +211,7 @@ def restore_simulator_from_file(sim, filename, prune_level=1.,
                 pop_cellparams = {**pop_cellclass.default_initial_values, **pop_cellclass.default_parameters}
 
             for k in replace_params.keys():
-                if k == 'v_thresh' and len(replace_params['v_thresh']) == no_pops - 1:
+                if k == 'v_thresh' and type(replace_params['v_thresh']) is not float and len(replace_params['v_thresh']) == no_pops - 1:
                     pop_cellparams[k] = replace_params[k][i-1]
                     continue
                 if k in pop_cellparams.keys():

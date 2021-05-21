@@ -1,5 +1,6 @@
 import pydoc
-from spynnaker8.models.synapse_dynamics import SynapseDynamicsStatic
+#from spynnaker8.models.synapse_dynamics import SynapseDynamicsStatic
+from spynnaker.pyNN.models.neuron.synapse_dynamics.synapse_dynamics_static import SynapseDynamicsStatic
 from spynnaker8 import SpikeSourceArray, SpikeSourcePoisson
 from spynnaker8.extra_models import SpikeSourcePoissonVariable
 import numpy as np
